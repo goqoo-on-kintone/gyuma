@@ -1,0 +1,19 @@
+{
+  "name": "gyuma",
+  "version": "0.1.0",
+  "description": "Gyuma is an OAuth client for kintone of Node.js.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/goqoo-on-kintone/gyuma.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/goqoo-on-kintone/gyuma/issues"
+  },
+  "homepage": "https://github.com/goqoo-on-kintone/gyuma#readme"
+}
