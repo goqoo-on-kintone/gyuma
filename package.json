@@ -15,5 +15,10 @@
   "bugs": {
     "url": "https://github.com/goqoo-on-kintone/gyuma/issues"
   },
-  "homepage": "https://github.com/goqoo-on-kintone/gyuma#readme"
+  "homepage": "https://github.com/goqoo-on-kintone/gyuma#readme",
+  "dependencies": {
+    "express": "^4.16.4",
+    "node-fetch": "^2.3.0",
+    "opener": "^1.5.1"
+  }
 }
