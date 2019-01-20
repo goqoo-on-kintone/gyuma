@@ -2,7 +2,7 @@
   "name": "gyuma",
   "version": "0.1.0",
   "description": "Gyuma is an OAuth client for kintone of Node.js.",
-  "main": "index.js",
+  "main": "lib/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
