@@ -49,16 +49,14 @@ const request = require('request-promise')
 
 ## CLI
 
+### Start Server
 ```
 $ gyuma \
 -d example.cybozu.com \
 -i xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
 -s xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
 -S "k:app_settings:read k:app_settings:write"
-
-$ curl --insecure https://localhost:3000/
 ```
-
 ### options
 ```
   -h, --help                          Output usage information
@@ -68,4 +66,36 @@ $ curl --insecure https://localhost:3000/
   -s, --client_secret=<CLIENT_SECRET> kintone OAuth2 Client Secret
   -S, --scope=<SCOPE>                 kintone OAuth2 Scope
   -p, --port=<PORT>                   Web Server port number - defaults to 3000
+```
+
+### Use Server from cURL
+```
+$ curl --insecure https://localhost:3000/
+```
+
+### Use Server from Node.js
+```js
+const https = require('https')
+const fetch = require('node-fetch')
+const request = require('request-promise')
+
+;(async () => {
+  const domain = 'example.cybozu.com'
+  const agent = new https.Agent({
+    rejectUnauthorized: false,
+  })
+  const { access_token } = await fetch(`https://localhost:3000`, {
+    method: 'GET',
+    agent,
+  }).then(res => res.json())
+
+  const options = {
+    url: `https://${domain}/k/v1/app/form/fields.json?app=256`,
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+    },
+    json: true,
+  }
+  console.log(await request(options))
+})()
 ```
