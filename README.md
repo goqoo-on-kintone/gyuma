@@ -99,3 +99,9 @@ const request = require('request-promise')
   console.log(await request(options))
 })()
 ```
+
+## kintone Official Documents
+
+[How to add OAuth clients (β) - English](https://developer.kintone.io/hc/en-us/articles/360001562353/)
+
+[OAuthクライアントの使用（β）- 日本語](https://developer.cybozu.io/hc/ja/articles/360015955171)
