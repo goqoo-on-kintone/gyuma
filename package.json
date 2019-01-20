@@ -16,6 +16,9 @@
     "url": "https://github.com/goqoo-on-kintone/gyuma/issues"
   },
   "homepage": "https://github.com/goqoo-on-kintone/gyuma#readme",
+  "engines": {
+    "node": ">=8.3"
+  },
   "devDependencies": {
     "eslint": "^5.12.1",
     "eslint-config-prettier": "^3.6.0",
