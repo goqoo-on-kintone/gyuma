@@ -21,9 +21,9 @@ const port = process.env.HTTPS_PORT || 3000
 
 module.exports = params =>
   new Promise((resolve, reject) => {
+    /* eslint-disable camelcase */
     const { clientId: client_id, clientSecret: client_secret, scope, domain } = params
     const localhost = `https://localhost:${port}`
-    /* eslint-disable camelcase */
     const redirect_uri = `${localhost}/oauth2callback`
     const response_type = 'code'
     /* eslint-enable camelcase */
