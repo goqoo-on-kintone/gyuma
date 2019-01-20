@@ -17,12 +17,11 @@ const options = {
   passphrase: process.env.HTTPS_PASSPHRASE,
 }
 const httpsServer = https.createServer(options, app)
-const port = process.env.HTTPS_PORT || 3000
 
 module.exports = params =>
   new Promise((resolve, reject) => {
     /* eslint-disable camelcase */
-    const { clientId: client_id, clientSecret: client_secret, scope, domain } = params
+    const { clientId: client_id, clientSecret: client_secret, scope, domain, port = 3000 } = params
     const localhost = `https://localhost:${port}`
     const redirect_uri = `${localhost}/oauth2callback`
     const response_type = 'code'
