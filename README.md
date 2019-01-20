@@ -49,11 +49,13 @@ const request = require('request-promise')
 ## CLI
 
 ```
-gyuma \
+$ gyuma \
 -d example.cybozu.com \
 -i xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
 -s xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
 -S "k:app_settings:read k:app_settings:write"
+
+$ curl --insecure https://localhost:3000/
 ```
 
 ### options
