@@ -1,6 +1,6 @@
 {
   "name": "gyuma",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Gyuma is an OAuth client for kintone of Node.js.",
   "main": "lib/server.js",
   "bin": "bin/gyuma.js",
