@@ -42,6 +42,7 @@ const parseArgumentOptions = () => {
       p: 'port',
     },
   })
+  argv.scope = argv.scope.replace(',', ' ')
 
   return argv
 }
