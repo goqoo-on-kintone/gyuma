@@ -3,7 +3,7 @@
 'use strict'
 
 const minimist = require('minimist')
-const server = require('../lib/server')
+const main = require('../lib/main')
 
 const trim = str => str.replace(/^\n|\n$/g, '')
 
@@ -52,7 +52,7 @@ const parseArgumentOptions = () => {
   return argv
 }
 
-const main = async () => {
+;(async () => {
   const argv = parseArgumentOptions()
 
   if (argv.version) {
@@ -62,10 +62,8 @@ const main = async () => {
   }
 
   try {
-    await server(argv)
+    await main(argv)
   } catch (err) {
     console.error(err)
   }
-}
-
-main()
+})()
