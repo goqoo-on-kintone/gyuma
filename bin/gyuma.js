@@ -19,10 +19,10 @@ usage: gyuma [<options>]
 
   -h, --help                          Output usage information
   -v, --version                       Output version information
+  -d, --domain=<DOMAIN>               kintone domain name
   -i, --client_id=<CLIENT_ID>         kintone OAuth2 Client ID
   -s, --client_secret=<CLIENT_SECRET> kintone OAuth2 Client Secret
   -S, --scope=<SCOPE>                 kintone OAuth2 Scope
-  -d, --domain=<DOMAIN>               kintone domain name
   -p, --port=<PORT>                   Web Server port number - defaults to 3000
 `)
   console.error(message)
@@ -31,17 +31,22 @@ usage: gyuma [<options>]
 const parseArgumentOptions = () => {
   const argv = minimist(process.argv.slice(2), {
     boolean: ['version', 'help', 'onetime'],
-    string: ['client_id', 'client_secret', 'scope', 'domain', 'port'],
+    string: ['domain', 'client_id', 'client_secret', 'scope', 'port'],
     alias: {
       v: 'version',
       h: 'help',
+      d: 'domain',
       i: 'client_id',
       s: 'client_secret',
       S: 'scope',
-      d: 'domain',
       p: 'port',
     },
   })
+
+  if (!argv.domain || !argv.client_id || !argv.client_secret || !argv.scope) {
+    usageExit()
+  }
+
   argv.scope = argv.scope.replace(/,/g, ' ')
 
   return argv
