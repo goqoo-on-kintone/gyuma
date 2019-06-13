@@ -1,3 +1,5 @@
+secret/
+
 # SSL
 ssl/*.pem
 
