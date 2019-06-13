@@ -7,3 +7,4 @@ rules:
   no-var: error
   prefer-const: error
   no-process-exit: off
+  new-cap: off

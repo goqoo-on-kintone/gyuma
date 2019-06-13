@@ -43,8 +43,7 @@ const parseArgumentOptions = () => {
     },
   })
 
-  // TODO: 既存を読み取る場合は、client_id, client_secretは必須でなくす
-  if (!argv.domain || !argv.client_id || !argv.client_secret || !argv.scope) {
+  if (!argv.domain || !argv.scope) {
     usageExit()
   }
 
@@ -63,7 +62,8 @@ const parseArgumentOptions = () => {
   }
 
   try {
-    await main(argv)
+    const accessToken = await main(argv)
+    console.log(accessToken)
   } catch (err) {
     console.error(err)
   }
