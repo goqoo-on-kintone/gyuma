@@ -39,6 +39,7 @@
     "moment": "^2.23.0",
     "node-fetch": "^2.3.0",
     "opener": "^1.5.1",
+    "passport": "^0.4.0",
     "selfsigned": "^1.10.4"
   }
 }
