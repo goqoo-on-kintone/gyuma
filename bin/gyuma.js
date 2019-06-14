@@ -23,7 +23,8 @@ usage: gyuma [<options>]
   -i, --client_id=<CLIENT_ID>         kintone OAuth2 Client ID
   -s, --client_secret=<CLIENT_SECRET> kintone OAuth2 Client Secret
   -S, --scope=<SCOPE>                 kintone OAuth2 Scope
-  -p, --port=<PORT>                   Web Server port number - defaults to 3000
+  -p, --password=<PASSWORD>           Credentials Password
+  -P, --port=<PORT>                   Web Server port number - defaults to 3000
 `)
   console.error(message)
   process.exit(returnCode)
@@ -39,7 +40,8 @@ const parseArgumentOptions = () => {
       i: 'client_id',
       s: 'client_secret',
       S: 'scope',
-      p: 'port',
+      p: 'password',
+      P: 'port',
     },
   })
 
