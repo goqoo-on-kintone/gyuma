@@ -31,7 +31,7 @@ usage: gyuma [<options>]
 }
 const parseArgumentOptions = () => {
   const argv = minimist(process.argv.slice(2), {
-    boolean: ['version', 'help', 'onetime'],
+    boolean: ['version', 'help', 'onetime', 'noprompt'],
     string: ['domain', 'client_id', 'client_secret', 'scope', 'port'],
     alias: {
       v: 'version',
