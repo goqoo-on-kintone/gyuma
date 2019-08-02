@@ -3,7 +3,7 @@
 'use strict'
 
 const minimist = require('minimist')
-const server = require('../lib/server')
+const main = require('../lib/main')
 
 const trim = str => str.replace(/^\n|\n$/g, '')
 
@@ -19,34 +19,42 @@ usage: gyuma [<options>]
 
   -h, --help                          Output usage information
   -v, --version                       Output version information
+  -d, --domain=<DOMAIN>               kintone domain name
   -i, --client_id=<CLIENT_ID>         kintone OAuth2 Client ID
   -s, --client_secret=<CLIENT_SECRET> kintone OAuth2 Client Secret
   -S, --scope=<SCOPE>                 kintone OAuth2 Scope
-  -d, --domain=<DOMAIN>               kintone domain name
-  -p, --port=<PORT>                   Web Server port number - defaults to 3000
+  -p, --password=<PASSWORD>           Credentials Password
+  -P, --port=<PORT>                   Web Server port number - defaults to 3000
 `)
   console.error(message)
   process.exit(returnCode)
 }
 const parseArgumentOptions = () => {
   const argv = minimist(process.argv.slice(2), {
-    boolean: ['version', 'help', 'onetime'],
-    string: ['client_id', 'client_secret', 'scope', 'domain', 'port'],
+    boolean: ['version', 'help', 'onetime', 'noprompt'],
+    string: ['domain', 'client_id', 'client_secret', 'scope', 'port'],
     alias: {
       v: 'version',
       h: 'help',
+      d: 'domain',
       i: 'client_id',
       s: 'client_secret',
       S: 'scope',
-      d: 'domain',
-      p: 'port',
+      p: 'password',
+      P: 'port',
     },
   })
+
+  if (!argv.domain || !argv.scope) {
+    usageExit()
+  }
+
+  argv.scope = argv.scope.replace(/,/g, ' ')
 
   return argv
 }
 
-const main = async () => {
+;(async () => {
   const argv = parseArgumentOptions()
 
   if (argv.version) {
@@ -56,10 +64,10 @@ const main = async () => {
   }
 
   try {
-    await server(argv)
+    const CLI = true
+    const accessToken = await main(argv, CLI)
+    console.log(accessToken)
   } catch (err) {
     console.error(err)
   }
-}
-
-main()
+})()
