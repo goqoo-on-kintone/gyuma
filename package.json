@@ -31,14 +31,14 @@
   },
   "dependencies": {
     "date-fns": "^2.29.2",
-    "del": "^7.0.0",
+    "del": "6",
     "dotenv": "^16.0.1",
     "express": "^4.16.4",
     "express-locale": "^2.0.1",
-    "inquirer": "^9.1.0",
+    "inquirer": "8",
     "minimist": "^1.2.0",
     "moment": "^2.23.0",
-    "node-fetch": "^3.2.10",
+    "node-fetch": "2",
     "opener": "^1.5.1",
     "passport": "^0.6.0",
     "selfsigned": "^2.0.1"
