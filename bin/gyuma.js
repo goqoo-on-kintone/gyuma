@@ -5,7 +5,7 @@
 const minimist = require('minimist')
 const main = require('../lib/main')
 
-const trim = str => str.replace(/^\n|\n$/g, '')
+const trim = (str) => str.replace(/^\n|\n$/g, '')
 
 const showVersion = () => {
   const { version } = require('../package.json')
