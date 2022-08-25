@@ -1,8 +1,7 @@
 extends:
   - standard
+  - plugin:n/recommended
   - prettier
-  - prettier/standard
-  - plugin:node/recommended
 rules:
   no-var: error
   prefer-const: error
