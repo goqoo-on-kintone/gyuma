@@ -1,9 +1,0 @@
-extends:
-  - standard
-  - plugin:n/recommended
-  - prettier
-rules:
-  no-var: error
-  prefer-const: error
-  no-process-exit: off
-  new-cap: off
