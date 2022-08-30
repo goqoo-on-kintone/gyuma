@@ -9,7 +9,7 @@ import del from 'del'
 import dotenv from 'dotenv'
 import { createCertificate } from './createCertificate'
 import { createAgent } from './agent'
-import { Client, Query, ServerParams } from './types'
+import { Client, Query, ServerParams, Token } from './types'
 
 dotenv.config()
 
@@ -62,9 +62,9 @@ if (process.env.HTTPS_KEY && process.env.HTTPS_CERT) {
 const app = express()
 const httpsServer = https.createServer(options, app)
 
-export const server = (params: ServerParams, type: any) =>
+export const server = (params: ServerParams): Promise<Token> =>
   new Promise((resolve, reject) => {
-    const tokens: Record<string, string> = {}
+    const tokens: Record<string, Token> = {}
     const clients: Record<string, Client> = {}
     let client: Client = {}
 
@@ -137,7 +137,7 @@ export const server = (params: ServerParams, type: any) =>
           throw new Error(errorMessage)
         }
 
-        const token = await oauth2Res.json()
+        const token = (await oauth2Res.json()) as Token
         tokens[client.domain!] = token
 
         res.write('<h1>Authentication succeeded 🎉</h1>')
