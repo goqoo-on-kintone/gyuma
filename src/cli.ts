@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 
-'use strict'
+import minimist from 'minimist'
+import main from './main'
+import { Argv } from './types'
 
-const minimist = require('minimist')
-const main = require('./main')
-
-const trim = (str) => str.replace(/^\n|\n$/g, '')
+const trim = (str: string) => str.replace(/^\n|\n$/g, '')
 
 const showVersion = () => {
   const { version } = require('../package.json')
@@ -65,7 +64,7 @@ const parseArgumentOptions = () => {
 
   try {
     const CLI = true
-    const accessToken = await main(argv, CLI)
+    const accessToken = await main(argv as unknown as Argv, CLI)
     console.info(accessToken)
   } catch (err) {
     console.error(err)
