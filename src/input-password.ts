@@ -1,7 +1,10 @@
-const inquirer = require('inquirer')
+import inquirer from 'inquirer'
 
-const name = 'value'
-const singlePrompt = (question) => inquirer.prompt([question]).then((_) => _[name])
+const name = 'value' as const
+
+type Question = Parameters<typeof inquirer.prompt>[number]
+const singlePrompt = (question: Question) =>
+  inquirer.prompt<Record<string, { foo: string }>>([question]).then((_) => _[name])
 
 const inputExistingPassword = async () =>
   singlePrompt({
@@ -31,17 +34,17 @@ const confirmNewPassword = async () =>
     name,
   })
 
-exports.inputPassword = async ({ exists }) => {
+export const inputPassword = async ({ exists }: { exists: boolean }) => {
   return exists ? inputExistingPassword() : inputNewPassword()
 }
 
-exports.inputClientId = async () =>
+export const inputClientId = async () =>
   singlePrompt({
     message: 'Enter a Client ID',
     name,
   })
 
-exports.inputClientSecret = async () =>
+export const inputClientSecret = async () =>
   singlePrompt({
     type: 'password',
     message: 'Enter a Client Secret',
