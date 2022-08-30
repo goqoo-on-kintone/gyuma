@@ -9,12 +9,12 @@ import del from 'del'
 import dotenv from 'dotenv'
 import { createCertificate } from './createCertificate'
 import { createAgent } from './agent'
-import { Client, Options, Query, ServerParams } from './types'
+import { Client, Query, ServerParams } from './types'
 
 dotenv.config()
 
 // サーバー証明書の設定 存在しなければ自動生成
-const options: Options = {}
+const options: https.ServerOptions = {}
 if (process.env.HTTPS_KEY && process.env.HTTPS_CERT) {
   options.key = fs.readFileSync(process.env.HTTPS_KEY)
   options.cert = fs.readFileSync(process.env.HTTPS_CERT)

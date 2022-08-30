@@ -7,12 +7,6 @@ export type ServerParams = {
   port?: number
 }
 
-export type Options = Partial<{
-  key: Buffer
-  cert: Buffer
-  passphrase: string
-}>
-
 export type Query = Partial<{
   domain: any
   client_id: any
