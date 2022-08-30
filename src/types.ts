@@ -48,3 +48,4 @@ export type ProxyOption =
       hostname: string
       port: number
     }
+export type PfxOption = { pfxFilepath: string; pfxPassword: string }
