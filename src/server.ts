@@ -1,16 +1,16 @@
-'use strict'
+import express from 'express'
+import fetch from 'node-fetch'
+import qs from 'qs'
+import fs from 'fs'
+import https from 'https'
+import opener from 'opener'
+import path from 'path'
+import del from 'del'
+import dotenv from 'dotenv'
+import { createCertificate } from './createCertificate'
+import { createAgent } from './agent'
 
-const express = require('express')
-const fetch = require('node-fetch')
-const qs = require('qs')
-const fs = require('fs')
-const https = require('https')
-const opener = require('opener')
-const path = require('path')
-const del = require('del')
-require('dotenv').config()
-const { createCertificate } = require('./createCertificate')
-const { createAgent } = require('./agent')
+dotenv.config()
 
 // サーバー証明書の設定 存在しなければ自動生成
 const options = {}
@@ -62,7 +62,7 @@ if (process.env.HTTPS_KEY && process.env.HTTPS_CERT) {
 const app = express()
 const httpsServer = https.createServer(options, app)
 
-module.exports = (params, type) =>
+export const server = (params, type) =>
   new Promise((resolve, reject) => {
     const tokens = {}
     const clients = {}

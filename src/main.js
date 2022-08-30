@@ -1,5 +1,5 @@
 const { isPast } = require('date-fns')
-const server = require('./server')
+const { server } = require('./server')
 const { writeToken, writeCredentials, readToken, readCredentials, existsCredentialsFile } = require('./config-file-io')
 const { inputPassword, inputClientId, inputClientSecret } = require('./input-password')
 
