@@ -3,8 +3,7 @@ import inquirer from 'inquirer'
 const name = 'value' as const
 
 type Question = Parameters<typeof inquirer.prompt>[number]
-const singlePrompt = (question: Question) =>
-  inquirer.prompt<Record<string, { foo: string }>>([question]).then((_) => _[name])
+const singlePrompt = (question: Question) => inquirer.prompt<{ [name]: string }>([question]).then((_) => _[name])
 
 const inputExistingPassword = async () =>
   singlePrompt({
