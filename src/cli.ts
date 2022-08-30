@@ -24,6 +24,9 @@ usage: gyuma [<options>]
   -S, --scope=<SCOPE>                 kintone OAuth2 Scope
   -p, --password=<PASSWORD>           Credentials Password
   -P, --port=<PORT>                   Web Server port number - defaults to 3000
+      --proxy=<PROXY>                 Proxy Server
+      --pfxFilepath=<PFX-FILEPATH>    Path to client certificate file
+      --pfxPassword=<PFX-PASSWORD>    Password of client certificate
 `)
   console.error(message)
   process.exit(returnCode)
@@ -31,7 +34,7 @@ usage: gyuma [<options>]
 const parseArgumentOptions = () => {
   const argv = minimist(process.argv.slice(2), {
     boolean: ['version', 'help', 'onetime', 'noprompt'],
-    string: ['domain', 'client_id', 'client_secret', 'scope', 'port'],
+    string: ['domain', 'client_id', 'client_secret', 'scope', 'port', 'proxy', 'pfxFilepath', 'pfxPassword'],
     alias: {
       v: 'version',
       h: 'help',
@@ -50,7 +53,13 @@ const parseArgumentOptions = () => {
 
   argv.scope = argv.scope.replace(/,/g, ' ')
 
-  return argv
+  const { pfxFilepath, pfxPassword, ...ret } = argv
+  ret.pfx = {
+    filepath: pfxFilepath,
+    password: pfxPassword,
+  }
+
+  return ret
 }
 
 ;(async () => {
