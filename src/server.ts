@@ -9,7 +9,7 @@ import del from 'del'
 import dotenv from 'dotenv'
 import { createCertificate } from './createCertificate'
 import { createAgent } from './agent'
-import { Client, Query, ServerParams, Token } from './types'
+import { AgentOptions, Argv, Client, Query, Token } from './types'
 
 dotenv.config()
 
@@ -62,13 +62,13 @@ if (process.env.HTTPS_KEY && process.env.HTTPS_CERT) {
 const app = express()
 const httpsServer = https.createServer(options, app)
 
-export const server = (params: ServerParams): Promise<Token> =>
+export const server = (params: Argv): Promise<Token> =>
   new Promise((resolve, reject) => {
     const tokens: Record<string, Token> = {}
     const clients: Record<string, Client> = {}
     let client: Client = {}
 
-    const { port = 3000 } = params
+    const { port = 3000, proxy, pfx } = params
     const localhost = `https://localhost:${port}`
     const redirect_uri = `${localhost}/oauth2callback`
 
@@ -116,8 +116,7 @@ export const server = (params: ServerParams): Promise<Token> =>
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          // TODO: プロキシとクライアント証明書のオプションを渡す
-          agent: createAgent(),
+          agent: createAgent({ proxy, pfx }),
           body: qs.stringify({
             client_id: client.client_id,
             client_secret: client.client_secret,

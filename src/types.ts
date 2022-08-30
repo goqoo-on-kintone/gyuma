@@ -1,21 +1,15 @@
 export type Argv = {
   domain: string
   scope: string
-
   password?: string
   client_id?: string
   client_secret?: string
+  port?: number
+
+  proxy?: ProxyOption
+  pfx?: PfxOption
 
   noprompt?: boolean
-}
-
-export type ServerParams = {
-  domain: string
-  scope: string
-  password: string
-  client_id: string
-  client_secret: string
-  port?: number
 }
 
 export type Client = Partial<{
@@ -48,4 +42,5 @@ export type ProxyOption =
       hostname: string
       port: number
     }
-export type PfxOption = { pfxFilepath: string; pfxPassword: string }
+export type PfxOption = { filepath: string; password: string }
+export type AgentOptions = { proxy?: ProxyOption; pfx?: PfxOption }

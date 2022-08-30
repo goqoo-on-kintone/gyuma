@@ -2,7 +2,7 @@ import { isPast } from 'date-fns'
 import { server } from './server'
 import { writeToken, writeCredentials, readToken, readCredentials, existsCredentialsFile } from './config-file-io'
 import { inputPassword, inputClientId, inputClientSecret } from './input-password'
-import { Argv, ServerParams } from './types'
+import { Argv } from './types'
 
 const generateNewAccessToken = async (argv: Argv) => {
   if (!argv.domain) {
@@ -29,7 +29,7 @@ const generateNewAccessToken = async (argv: Argv) => {
   }
   const credentials = { client_id: argv.client_id, client_secret: argv.client_secret }
 
-  const serverParams = { ...argv, ...credentials } as ServerParams
+  const serverParams = { ...argv, ...credentials }
   const token = await server(serverParams)
   writeToken({ domain, token })
   writeCredentials({ domain, credentials, password })
