@@ -1,9 +1,10 @@
-const { isPast } = require('date-fns')
-const { server } = require('./server')
-const { writeToken, writeCredentials, readToken, readCredentials, existsCredentialsFile } = require('./config-file-io')
-const { inputPassword, inputClientId, inputClientSecret } = require('./input-password')
+import { isPast } from 'date-fns'
+import { server } from './server'
+import { writeToken, writeCredentials, readToken, readCredentials, existsCredentialsFile } from './config-file-io'
+import { inputPassword, inputClientId, inputClientSecret } from './input-password'
+import { Argv, ServerParams } from './types'
 
-const generateNewAccessToken = async (argv) => {
+const generateNewAccessToken = async (argv: Argv) => {
   if (!argv.domain) {
     throw new Error('domain is not found!')
   }
@@ -28,14 +29,15 @@ const generateNewAccessToken = async (argv) => {
   }
   const credentials = { client_id: argv.client_id, client_secret: argv.client_secret }
 
-  const token = await server({ ...argv, ...credentials })
+  const serverParams = { ...argv, ...credentials } as ServerParams
+  const token = await server(serverParams)
   writeToken({ domain, token })
   writeCredentials({ domain, credentials, password })
 
   return token.access_token
 }
 
-module.exports = async (argv, CLI = false) => {
+const main = async (argv: Argv, CLI = false) => {
   if (!CLI) {
     argv.noprompt = true
   }
@@ -60,3 +62,4 @@ module.exports = async (argv, CLI = false) => {
   // 同一scopeで期限内のトークンが残っていれば、そのまま使う
   return oldToken.access_token
 }
+export default main

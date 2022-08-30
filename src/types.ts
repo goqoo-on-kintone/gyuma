@@ -1,3 +1,14 @@
+export type Argv = {
+  domain: string
+  scope: string
+
+  password?: string
+  client_id?: string
+  client_secret?: string
+
+  noprompt?: boolean
+}
+
 export type ServerParams = {
   domain: string
   scope: string
@@ -26,6 +37,7 @@ export type Credentials = {
 export type Token = {
   expiry: string
   refresh_token?: string
+  access_token: string
 }
 
 export type ProxyOption =
