@@ -18,6 +18,16 @@ export type Query = Required<Client> & {
   scope: string
 }
 
+export type Credentials = {
+  client_id: string
+  client_secret: string
+}
+
+export type Token = {
+  expiry: string
+  refresh_token?: string
+}
+
 export type ProxyOption =
   | string
   | {
