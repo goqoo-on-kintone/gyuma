@@ -10,6 +10,7 @@ const path = require('path')
 const del = require('del')
 require('dotenv').config()
 const createCertificate = require('./createCertificate')
+const { createAgent } = require('./agent')
 
 // サーバー証明書の設定 存在しなければ自動生成
 const options = {}
@@ -110,12 +111,13 @@ module.exports = (params, type) =>
         }
 
         const tokenUri = `https://${client.domain}/oauth2/token`
-        // TODO: プロキシ経由のトークン発行に対応
         const oauth2Res = await fetch(tokenUri, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
+          // TODO: プロキシとクライアント証明書のオプションを渡す
+          agent: createAgent(),
           body: qs.stringify({
             client_id: client.client_id,
             client_secret: client.client_secret,
