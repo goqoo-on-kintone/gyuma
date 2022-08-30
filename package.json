@@ -1,13 +1,13 @@
 {
   "name": "gyuma",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Gyuma is an OAuth client for kintone of Node.js.",
   "main": "./dist/main.js",
   "bin": {
     "gyuma": "./dist/cli.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "postinstall": "mkdir ssl"
   },
   "repository": {
     "type": "git",
