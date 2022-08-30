@@ -9,11 +9,12 @@ import del from 'del'
 import dotenv from 'dotenv'
 import { createCertificate } from './createCertificate'
 import { createAgent } from './agent'
+import { Client, Options, Query, ServerParams } from './types'
 
 dotenv.config()
 
 // サーバー証明書の設定 存在しなければ自動生成
-const options = {}
+const options: Options = {}
 if (process.env.HTTPS_KEY && process.env.HTTPS_CERT) {
   options.key = fs.readFileSync(process.env.HTTPS_KEY)
   options.cert = fs.readFileSync(process.env.HTTPS_CERT)
@@ -34,6 +35,7 @@ if (process.env.HTTPS_KEY && process.env.HTTPS_CERT) {
     const now = new Date()
 
     // cert is more than 30 days old, kill it with fire
+    // @ts-expect-error
     if ((now - certStat.ctime) / certTtl > 30) {
       // console.log('SSL Certificate is more than 30 days old. Removing.')
 
@@ -46,9 +48,7 @@ if (process.env.HTTPS_KEY && process.env.HTTPS_CERT) {
   if (!certExists) {
     // console.log('Generating SSL Certificate')
 
-    const attrs = [{ name: 'commonName', value: 'localhost' }]
-
-    const pems = createCertificate(attrs)
+    const pems = createCertificate([{ name: 'commonName', value: 'localhost' }])
 
     fs.writeFileSync(certPath, pems.private + pems.cert, { encoding: 'utf-8' })
   }
@@ -62,19 +62,19 @@ if (process.env.HTTPS_KEY && process.env.HTTPS_CERT) {
 const app = express()
 const httpsServer = https.createServer(options, app)
 
-export const server = (params, type) =>
+export const server = (params: ServerParams, type: any) =>
   new Promise((resolve, reject) => {
-    const tokens = {}
-    const clients = {}
-    let client = {}
+    const tokens: Record<string, string> = {}
+    const clients: Record<string, Client> = {}
+    let client: Client = {}
 
     const { port = 3000 } = params
     const localhost = `https://localhost:${port}`
-    const redirect_uri = `${localhost}/oauth2callback` // eslint-disable-line camelcase
+    const redirect_uri = `${localhost}/oauth2callback`
 
     // 認可要求
     app.get('/oauth2', (req, res) => {
-      const { domain, client_id, client_secret, scope } = req.query // eslint-disable-line camelcase
+      const { domain, client_id, client_secret, scope } = req.query as Query
       const state = Math.random().toString(36)
       client = {
         domain,
