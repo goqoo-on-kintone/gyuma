@@ -21,7 +21,7 @@ const writeToken = ({ domain, token }) => {
   const oldToken = readToken({ domain })
   const domainDir = path.join(CONFIG_DIR, domain)
   fs.mkdirSync(domainDir, { recursive: true })
-  console.log(path.join(domainDir, CREDENTIALS_FILE))
+  console.info(path.join(domainDir, CREDENTIALS_FILE))
   fs.writeFileSync(path.join(domainDir, TOKEN_FILE), JSON.stringify({ ...oldToken, ...token }))
 }
 

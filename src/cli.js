@@ -66,7 +66,7 @@ const parseArgumentOptions = () => {
   try {
     const CLI = true
     const accessToken = await main(argv, CLI)
-    console.log(accessToken)
+    console.info(accessToken)
   } catch (err) {
     console.error(err)
   }
