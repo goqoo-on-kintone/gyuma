@@ -1,11 +1,11 @@
-const crypto = require('crypto')
+import crypto from 'crypto'
 
 const ALGORITHM = 'aes-256-cbc'
 const SALT = 'lKzR+i6IwG/DbuAY5thksw=='
 const ENCODING = 'base64'
 
 // 暗号化メソッド
-const encrypt = (rawData, password) => {
+export const encrypt = (rawData: string, password: string) => {
   // 鍵、IV、暗合器を生成
   const key = crypto.scryptSync(password, SALT, 32)
   const iv = crypto.randomBytes(16)
@@ -21,7 +21,7 @@ const encrypt = (rawData, password) => {
 }
 
 // 複合メソッド
-const decrypt = (encodedCiphertext, password) => {
+export const decrypt = (encodedCiphertext: string, password: string) => {
   const ciphertext = Buffer.from(encodedCiphertext, ENCODING)
 
   // iv is first 16 bytes of the ciphertext
@@ -40,14 +40,9 @@ const decrypt = (encodedCiphertext, password) => {
     const rawData = decryptedData.toString()
     return rawData
   } catch (e) {
-    if (e.message.includes('EVP_DecryptFinal_ex')) {
+    if ((e as Error).message.includes('EVP_DecryptFinal_ex')) {
       console.error('Failed to decrypt credentials file!')
       process.exit(1)
     }
   }
-}
-
-module.exports = {
-  encrypt,
-  decrypt,
 }
