@@ -7,20 +7,16 @@ export type ServerParams = {
   port?: number
 }
 
-export type Query = Partial<{
-  domain: any
-  client_id: any
-  client_secret: any
-  state: any
-  scope: any
+export type Client = Partial<{
+  domain: string
+  client_id: string
+  client_secret: string
+  state: string
 }>
 
-export type Client = Partial<{
-  domain: any
-  client_id: any
-  client_secret: any
-  state: any
-}>
+export type Query = Required<Client> & {
+  scope: string
+}
 
 export type ProxyOption =
   | string

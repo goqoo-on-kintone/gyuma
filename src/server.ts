@@ -138,7 +138,7 @@ export const server = (params: ServerParams, type: any) =>
         }
 
         const token = await oauth2Res.json()
-        tokens[client.domain] = token
+        tokens[client.domain!] = token
 
         res.write('<h1>Authentication succeeded 🎉</h1>')
         res.status(200).end(resultMessage)
