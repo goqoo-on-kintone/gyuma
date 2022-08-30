@@ -3,7 +3,7 @@
 'use strict'
 
 const minimist = require('minimist')
-const main = require('../lib/main')
+const main = require('./main')
 
 const trim = (str) => str.replace(/^\n|\n$/g, '')
 
