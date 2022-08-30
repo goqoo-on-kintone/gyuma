@@ -766,6 +766,11 @@
   resolved "https://registry.yarnpkg.com/@types/prettier/-/prettier-2.7.0.tgz#ea03e9f0376a4446f44797ca19d9c46c36e352dc"
   integrity sha512-RI1L7N4JnW5gQw2spvL7Sllfuf1SaHdrZpCHiBlCXjIlufi1SMNnbu2teze3/QE67Fg2tBlH7W+mi4hVNk4p0A==
 
+"@types/selfsigned@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@types/selfsigned/-/selfsigned-2.0.1.tgz#13b316af4f00c54ee46cc1b7e65fe84d697b9a17"
+  integrity sha512-I0DjYArgQ4XNCN19gDuGsxp892uZVWSlmJZOF3Zpis1YZ2qC8EQyQlipUHIOyVMtDV/IsYqzSrl3ukAoYJU67A==
+
 "@types/stack-utils@^2.0.0":
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/@types/stack-utils/-/stack-utils-2.0.1.tgz#20f18294f797f2209b5f65c8e3b5c8e8261d127c"

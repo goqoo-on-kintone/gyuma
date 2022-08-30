@@ -1,8 +1,6 @@
-'use strict'
+import selfsigned from 'selfsigned'
 
-const selfsigned = require('selfsigned')
-
-function createCertificate(attributes) {
+export const createCertificate = (attributes: [{ name: string; value: string }]) => {
   return selfsigned.generate(attributes, {
     algorithm: 'sha256',
     days: 30,
@@ -65,5 +63,3 @@ function createCertificate(attributes) {
     ],
   })
 }
-
-module.exports = createCertificate

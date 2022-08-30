@@ -9,7 +9,7 @@ const opener = require('opener')
 const path = require('path')
 const del = require('del')
 require('dotenv').config()
-const createCertificate = require('./createCertificate')
+const { createCertificate } = require('./createCertificate')
 const { createAgent } = require('./agent')
 
 // サーバー証明書の設定 存在しなければ自動生成
