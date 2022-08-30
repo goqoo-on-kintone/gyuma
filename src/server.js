@@ -2,7 +2,7 @@
 
 const express = require('express')
 const fetch = require('node-fetch')
-const qs = require('querystring')
+const qs = require('qs')
 const fs = require('fs')
 const https = require('https')
 const opener = require('opener')
