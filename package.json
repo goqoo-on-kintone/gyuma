@@ -2,7 +2,7 @@
   "name": "gyuma",
   "version": "0.5.1",
   "description": "Gyuma is an OAuth client for kintone of Node.js.",
-  "main": "./dist/main.js",
+  "main": "./dist/index.js",
   "bin": {
     "gyuma": "./dist/cli.js"
   },
