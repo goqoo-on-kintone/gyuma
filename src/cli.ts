@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import minimist from 'minimist'
-import main from './main'
+import { gyuma } from './main'
 import { Argv } from './types'
 
 const trim = (str: string) => str.replace(/^\n|\n$/g, '')
@@ -73,7 +73,7 @@ const parseArgumentOptions = () => {
 
   try {
     const CLI = true
-    const accessToken = await main(argv as unknown as Argv, CLI)
+    const accessToken = await gyuma(argv as unknown as Argv, CLI)
     console.info(accessToken)
   } catch (err) {
     console.error(err)

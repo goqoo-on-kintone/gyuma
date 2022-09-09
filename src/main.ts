@@ -37,7 +37,7 @@ const generateNewAccessToken = async (argv: Argv) => {
   return token.access_token
 }
 
-const main = async (argv: Argv, CLI = false) => {
+export const gyuma = async (argv: Argv, CLI = false) => {
   if (!CLI) {
     argv.noprompt = true
   }
@@ -62,4 +62,3 @@ const main = async (argv: Argv, CLI = false) => {
   // 同一scopeで期限内のトークンが残っていれば、そのまま使う
   return oldToken.access_token
 }
-export default main
