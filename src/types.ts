@@ -32,6 +32,7 @@ export type Token = {
   expiry: string
   refresh_token?: string
   access_token: string
+  scope: string
 }
 
 export type ProxyOption =

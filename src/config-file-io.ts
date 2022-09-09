@@ -41,7 +41,7 @@ export const writeCredentials = ({
   fs.writeFileSync(path.join(domainDir, CREDENTIALS_FILE), encryptedCredentials, 'utf-8')
 }
 
-export const readToken = ({ domain }: { domain: string }) => {
+export const readToken = ({ domain }: { domain: string }): Token => {
   const tokenFilePath = path.join(CONFIG_DIR, domain, TOKEN_FILE)
   const token = fs.existsSync(tokenFilePath) ? require(tokenFilePath) : {}
   return token
