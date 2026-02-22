@@ -115,8 +115,13 @@ client_secret = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ```
 ~/.config/gyuma/
-├── credentials       # クレデンシャル（プレーンテキスト・任意）
-└── tokens.json       # トークンキャッシュ（ドメインをキーとした JSON）
+├── credentials           # クレデンシャル（プレーンテキスト・任意）
+├── tokens.json           # トークンキャッシュ（ドメインをキーとした JSON）
+└── certs/                # 証明書ディレクトリ
+    ├── localhost.pem     # mkcert 証明書（setup-cert で生成）
+    ├── localhost-key.pem # mkcert 秘密鍵
+    ├── self-signed.pem   # 自己署名証明書（フォールバック用）
+    └── self-signed-key.pem
 ```
 
 ### tokens.json のフォーマット
@@ -164,6 +169,90 @@ Go 版では機能として実装するが、**デフォルトは無効・オプ
 
 ---
 
+## 証明書管理（mkcert サポート）
+
+### 背景
+
+kintone の OAuth コールバックは HTTPS 必須。現行は自己署名証明書を自動生成しているが、ブラウザで警告が表示される。
+[mkcert](https://github.com/FiloSottile/mkcert) を使えば、ローカルで信頼された証明書を簡単に生成できる。
+
+### 設計方針
+
+- **サブコマンド方式**: `gyuma setup-cert` で証明書を生成・登録
+- **警告付きフォールバック**: mkcert 証明書がない場合は従来の自己署名証明書で動作（警告表示）
+
+### `gyuma setup-cert` サブコマンド
+
+```bash
+gyuma setup-cert [options]
+
+  --host       証明書のホスト名（デフォルト: localhost）
+  --port       HTTPS サーバーのポート（デフォルト: 3000）
+  --force      既存の証明書を上書き
+```
+
+**処理フロー**:
+
+```
+1. mkcert がインストールされているか確認
+   - なければエラー終了（インストール方法を案内）
+2. mkcert -install でルート CA を登録（未登録の場合）
+3. mkcert localhost で証明書を生成
+4. ~/.config/gyuma/certs/ に保存
+   - localhost.pem（証明書）
+   - localhost-key.pem（秘密鍵）
+5. 成功メッセージを表示
+```
+
+**出力例**:
+
+```
+$ gyuma setup-cert
+✓ mkcert found: /usr/local/bin/mkcert
+✓ Root CA already installed
+✓ Certificate generated: ~/.config/gyuma/certs/localhost.pem
+Setup complete! You can now use gyuma without browser warnings.
+```
+
+### 証明書の検索・フォールバックフロー
+
+通常の `gyuma` コマンド実行時：
+
+```
+1. ~/.config/gyuma/certs/localhost.pem を探す
+   - 存在する → mkcert 証明書で HTTPS サーバー起動
+   - 存在しない → フォールバックへ
+
+2. フォールバック（自己署名証明書）
+   a. 警告メッセージを stderr に出力（初回のみ）:
+      ⚠ mkcert証明書が見つかりません。ブラウザで警告が表示される場合があります。
+        Tip: `gyuma setup-cert` で信頼された証明書をセットアップできます。
+   b. ~/.config/gyuma/certs/self-signed.pem を確認
+      - 存在しない or 30日以上経過 → 自己署名証明書を生成
+   c. 自己署名証明書で HTTPS サーバー起動
+```
+
+### ファイル構成（更新）
+
+```
+~/.config/gyuma/
+├── credentials           # クレデンシャル（プレーンテキスト・任意）
+├── tokens.json           # トークンキャッシュ
+└── certs/
+    ├── localhost.pem     # mkcert 証明書（setup-cert で生成）
+    ├── localhost-key.pem # mkcert 秘密鍵
+    ├── self-signed.pem   # 自己署名証明書（フォールバック用）
+    └── self-signed-key.pem
+```
+
+### 警告メッセージの表示制御
+
+- mkcert 証明書がなく、自己署名証明書を使用する場合に警告を表示
+- 同一セッション内では初回のみ表示（連続実行時に煩わしくならないよう）
+- `--quiet` フラグで警告を抑制可能（CI/CD 向け）
+
+---
+
 ## Goバイナリの設計
 
 ### ディレクトリ構成
@@ -183,7 +272,8 @@ gyuma/                              ← リポジトリルート（goqoo-on-kint
 │   ├── browser/
 │   │   └── open.go                 # ブラウザ起動（OS別）
 │   └── cert/
-│       └── cert.go                 # 自己署名証明書生成
+│       ├── cert.go                 # 自己署名証明書生成
+│       └── mkcert.go               # mkcert 連携（検出・実行）
 ├── npm/
 │   ├── gyuma-cli/                  # gyuma-cli パッケージ（Goバイナリ）
 │   │   └── package.json
@@ -205,8 +295,10 @@ gyuma/                              ← リポジトリルート（goqoo-on-kint
 ### CLI インターフェース
 
 ```
-gyuma [options]
+gyuma [options]                    # OAuth トークン取得（メインコマンド）
+gyuma setup-cert [options]         # mkcert 証明書のセットアップ
 
+# メインコマンドのオプション
   -d, --domain           kintone ドメイン名
   -i, --client-id        OAuth2 Client ID
   -s, --client-secret    OAuth2 Client Secret
@@ -217,8 +309,14 @@ gyuma [options]
       --pfx-filepath     クライアント証明書ファイルパス
       --pfx-password     クライアント証明書パスワード
       --noprompt         インタラクティブな入力を無効化
+      --quiet            警告メッセージを抑制（CI/CD 向け）
   -v, --version          バージョン表示
   -h, --help             ヘルプ表示
+
+# setup-cert サブコマンドのオプション
+      --host             証明書のホスト名（デフォルト: localhost）
+      --port             HTTPS サーバーのポート（デフォルト: 3000）
+      --force            既存の証明書を上書き
 ```
 
 > 現行にあった `--password`（クレデンシャル暗号化パスワード）は暗号化廃止に伴い削除。
@@ -388,4 +486,3 @@ Phase 4 は Phase 3 から最低 6 ヶ月以上の猶予を設ける。
 ## 検討事項・未決事項
 
 - [ ] `--noprompt` モードでの CI/CD 利用シナリオを Go 版でも整備するか（将来検討）
-- [ ] Windows での自己署名証明書の扱い（kintone は HTTPS 必須のため HTTP への変更は不可。開発者ツールとして自己署名証明書の警告を受け入れる運用を想定）
