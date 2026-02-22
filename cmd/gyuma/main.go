@@ -30,19 +30,20 @@ func main() {
 func runMain() error {
 	// フラグ定義
 	var (
-		domain       string
-		clientID     string
-		clientSecret string
-		scope        string
-		port         int
-		useRefresh   bool
-		proxy        string
-		pfxFilepath  string
-		pfxPassword  string
-		noPrompt     bool
-		quiet        bool
-		showVersion  bool
-		showHelp     bool
+		domain          string
+		clientID        string
+		clientSecret    string
+		scope           string
+		port            int
+		useRefresh      bool
+		saveCredentials bool
+		proxy           string
+		pfxFilepath     string
+		pfxPassword     string
+		noPrompt        bool
+		quiet           bool
+		showVersion     bool
+		showHelp        bool
 	)
 
 	flag.StringVar(&domain, "d", "", "kintone domain name")
@@ -56,6 +57,7 @@ func runMain() error {
 	flag.IntVar(&port, "P", 3000, "Local server port")
 	flag.IntVar(&port, "port", 3000, "Local server port")
 	flag.BoolVar(&useRefresh, "refresh-token", false, "Save and use refresh token")
+	flag.BoolVar(&saveCredentials, "save-credentials", false, "Save credentials to file")
 	flag.StringVar(&proxy, "proxy", "", "Proxy server")
 	flag.StringVar(&pfxFilepath, "pfx-filepath", "", "Client certificate file path")
 	flag.StringVar(&pfxPassword, "pfx-password", "", "Client certificate password")
@@ -94,6 +96,16 @@ func runMain() error {
 
 	if !quiet {
 		fmt.Fprintf(os.Stderr, "Using credentials from %s\n", source)
+	}
+
+	// クレデンシャルを保存
+	if saveCredentials && source != config.SourceFile {
+		if err := config.SaveCredentials(domain, creds); err != nil {
+			return fmt.Errorf("failed to save credentials: %w", err)
+		}
+		if !quiet {
+			fmt.Fprintf(os.Stderr, "Credentials saved to file\n")
+		}
 	}
 
 	// OAuth フローを実行
@@ -162,6 +174,7 @@ Main command options:
   -S, --scope            OAuth2 Scope (required, space or comma separated)
   -P, --port             Local server port (default: 3000)
       --refresh-token    Save and use refresh token (default: disabled)
+      --save-credentials Save credentials to file for future use
       --proxy            Proxy server
       --pfx-filepath     Client certificate file path
       --pfx-password     Client certificate password
