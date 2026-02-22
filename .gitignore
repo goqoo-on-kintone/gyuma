@@ -1,5 +1,6 @@
 secret/
 dist/
+bin/
 
 # SSL
 ssl/*.pem
