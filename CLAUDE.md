@@ -4,8 +4,16 @@
 
 ## プロジェクト概要
 
-**Gyuma OAuth** は kintone 向けの OAuth 2.0 クライアントライブラリ（Node.js / TypeScript）。  
+**Gyuma OAuth** は kintone 向けの OAuth 2.0 クライアントライブラリ。
 API としての利用と、CLI ツールとしての利用の両方をサポートする。
+
+### Go 版への移行
+
+現在、Node.js/TypeScript 版から Go 版への全面書き直しを進めている。
+
+- **設計書**: [docs/go-rewrite-design.md](docs/go-rewrite-design.md)
+- **TODO**: [docs/TODO.md](docs/TODO.md)
+- **Node.js 版アーカイブ**: `nodejs-archive` ブランチ
 
 ## 技術スタック
 
@@ -96,10 +104,13 @@ type Token = {
 ## 開発ブランチ運用
 
 - `main` - リリースブランチ
-- `feature/design` - 設計ドキュメント作業ブランチ（現行の作業ブランチ）
+- `feature/design` - 設計ドキュメント作業ブランチ
+- `feature/go-rewrite` - Go 版実装ブランチ
+- `nodejs-archive` - Node.js 版のコードを保存（参照用・変更しない）
 
 ## 注意事項
 
-- **コードの変更はこのブランチでは行わない**。設計書の作成・更新のみを行う。
+- `feature/design` ブランチではコードの変更は行わない（設計書の作成・更新のみ）
+- Go 版の実装は `feature/go-rewrite` ブランチで行う
 - SSL証明書（`ssl/` 配下）は `.gitignore` に含めること（自動生成されるため）
 - PAT はチャット完了後に必ず Revoke すること
