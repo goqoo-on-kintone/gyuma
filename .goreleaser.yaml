@@ -55,6 +55,8 @@ brews:
     homepage: "https://github.com/goqoo-on-kintone/gyuma"
     description: "OAuth 2.0 CLI tool for kintone"
     license: "MIT"
+    # beta/alpha/rc バージョンは Homebrew にはプッシュしない
+    skip_upload: auto
     install: |
       bin.install "gyuma"
     test: |
