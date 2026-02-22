@@ -9,7 +9,7 @@
 - [x] Go モジュール初期化（`go mod init`）
 - [x] ディレクトリ構成の作成（`cmd/`, `internal/`）
 - [x] Makefile 作成（ビルド・クロスコンパイル用）
-- [ ] Node.js 版のファイルを整理（`src/` → `_legacy/` にリネーム or 削除）
+- [x] Node.js 版のファイルを削除（`nodejs-archive` ブランチに保存済み）
 
 ### 1.2 設定・パス管理（internal/config）
 
