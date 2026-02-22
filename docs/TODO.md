@@ -47,18 +47,14 @@
 
 ### 2.1 JS ラッパー（npm/gyuma）
 
-- [ ] `package.json` 作成
-- [ ] `lib/index.ts` - Go バイナリを呼び出すラッパー
-- [ ] `lib/resolve-binary.ts` - プラットフォーム別バイナリパス解決
-- [ ] `bin/gyuma.js` - CLI シム
+- [x] `package.json` 作成
+- [x] `install.js` - GitHub Releases からバイナリをダウンロード
+- [x] `bin/gyuma.js` - バイナリラッパー
 
-### 2.2 プラットフォーム別バイナリパッケージ
+### 2.2 バイナリ配布
 
-- [ ] `gyuma-darwin-arm64` パッケージ
-- [ ] `gyuma-darwin-x64` パッケージ
-- [ ] `gyuma-linux-x64` パッケージ
-- [ ] `gyuma-linux-arm64` パッケージ
-- [ ] `gyuma-win32-x64` パッケージ
+- [x] GoReleaser でクロスコンパイル（darwin/linux/windows × amd64/arm64）
+- [x] postinstall でプラットフォーム別バイナリを自動ダウンロード
 
 ---
 
@@ -66,8 +62,10 @@
 
 ### 3.1 CI/CD
 
-- [ ] GitHub Actions ワークフロー（クロスコンパイル）
-- [ ] npm publish 自動化
+- [x] GitHub Actions ワークフロー（`.github/workflows/release.yaml`）
+- [x] GoReleaser 設定（`.goreleaser.yaml`）
+- [x] npm publish 自動化
+- [x] Homebrew tap 自動更新
 
 ### 3.2 ドキュメント
 
