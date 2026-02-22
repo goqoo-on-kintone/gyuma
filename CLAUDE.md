@@ -15,102 +15,86 @@ API としての利用と、CLI ツールとしての利用の両方をサポー
 - **TODO**: [docs/TODO.md](docs/TODO.md)
 - **Node.js 版アーカイブ**: `nodejs-archive` ブランチ
 
-## 技術スタック
+## 技術スタック（Go 版）
 
-- **言語**: TypeScript
-- **ランタイム**: Node.js
-- **主要依存ライブラリ**:
-  - `express` - OAuth コールバック受信用 HTTPS サーバー
-  - `node-fetch` - kintone トークンエンドポイントへの HTTP リクエスト
-  - `proxy-agent` - プロキシ対応
-  - `minimist` - CLI 引数パース
-  - `date-fns` / `moment` - トークン有効期限の計算
-  - `opener` - ブラウザ自動起動
-  - `qs` - クエリストリングのシリアライズ
+- **言語**: Go
+- **主要パッケージ**:
+  - `net/http` - HTTPS サーバー / OAuth コールバック
+  - `crypto/x509` - 自己署名証明書生成
+  - `gopkg.in/ini.v1` - クレデンシャルファイル（INI 形式）のパース
 
-## ディレクトリ構成
+## ディレクトリ構成（Go 版）
 
 ```
 gyuma/
-├── src/
-│   ├── index.ts          # エントリポイント（named export）
-│   ├── main.ts           # gyuma() メイン関数 / トークンキャッシュロジック
-│   ├── server.ts         # HTTPS サーバー / OAuth 認可フロー処理
-│   ├── agent.ts          # HTTP エージェント生成（プロキシ / クライアント証明書）
-│   ├── cli.ts            # CLI エントリポイント
-│   ├── config-file-io.ts # トークン・クレデンシャルのファイル I/O
-│   ├── encrypt.ts        # クレデンシャルの暗号化・復号
-│   ├── input-password.ts # インタラクティブなパスワード入力
-│   ├── createCertificate.ts # 自己署名証明書の生成
-│   ├── constants.ts      # 設定ディレクトリパス等の定数
-│   └── types.ts          # TypeScript 型定義
-├── ssl/                  # 自動生成される自己署名証明書の格納先
-├── test/                 # テストコード
-├── package.json
-└── tsconfig.json
+├── cmd/
+│   └── gyuma/
+│       └── main.go           # CLI エントリポイント
+├── internal/
+│   ├── auth/
+│   │   ├── server.go         # HTTPS サーバー / OAuth フロー
+│   │   └── token.go          # トークンキャッシュ読み書き
+│   ├── config/
+│   │   ├── credentials.go    # クレデンシャル読み込み（優先順位制御）
+│   │   └── paths.go          # 設定ディレクトリパス
+│   ├── browser/
+│   │   └── open.go           # ブラウザ起動（OS別）
+│   └── cert/
+│       ├── cert.go           # 自己署名証明書生成
+│       └── mkcert.go         # mkcert 連携（検出・実行）
+├── docs/
+│   ├── go-rewrite-design.md  # 設計書
+│   └── TODO.md               # 実装 TODO リスト
+├── src/                      # Node.js 版（deprecated・後で削除予定）
+├── go.mod
+├── go.sum
+├── Makefile
+└── CLAUDE.md
 ```
 
-## アーキテクチャ概要
+## ビルド・実行
 
-### OAuth フロー
+```bash
+# ビルド
+make build
 
-1. `gyuma(argv)` が呼ばれる
-2. キャッシュ済みトークンの有無・scope 一致・有効期限をチェック
-3. 有効なトークンがあればそのまま返す（ブラウザ起動なし）
-4. なければ `server()` を起動：
-   - ローカルに HTTPS サーバー（デフォルト `https://localhost:3000`）を立ち上げる
-   - ブラウザを自動起動して kintone の OAuth 認可ページへリダイレクト
-   - コールバック（`/oauth2callback`）でアクセストークンを取得
-   - CSRF 対策として `state` パラメータを検証
-5. 取得したトークンを `~/.config/gyuma/<domain>/token.json` にキャッシュ
-6. クレデンシャル（client_id / client_secret）は暗号化して `~/.config/gyuma/<domain>/credentials` に保存
+# クロスコンパイル（全プラットフォーム）
+make build-all
 
-### ファイル保存先
+# ヘルプ表示
+./bin/gyuma --help
+```
+
+## CLI インターフェース
+
+```
+gyuma [options]                    # OAuth トークン取得
+gyuma setup-cert [options]         # mkcert 証明書のセットアップ
+
+# 主要オプション
+  -d, --domain           kintone ドメイン名（必須）
+  -S, --scope            OAuth2 Scope（必須）
+  -i, --client-id        OAuth2 Client ID
+  -s, --client-secret    OAuth2 Client Secret
+  --refresh-token        リフレッシュトークンを保存・利用
+  --quiet                警告メッセージを抑制
+```
+
+## ファイル保存先（Go 版）
 
 - 設定ルート: `~/.config/gyuma/`
-- トークン: `~/.config/gyuma/<domain>/token.json`
-- クレデンシャル: `~/.config/gyuma/<domain>/credentials`（暗号化済み）
-
-## 型定義（types.ts）
-
-```typescript
-type Argv = {
-  domain: string
-  scope: string
-  password?: string
-  client_id?: string
-  client_secret?: string
-  port?: number
-  proxy?: ProxyOption
-  pfx?: PfxOption
-  noprompt?: boolean
-}
-
-type Token = {
-  expiry: string
-  refresh_token?: string  // 現在は保存しない（writeToken で削除）
-  access_token: string
-  scope: string
-}
-```
-
-## 既知の TODO / 技術的負債
-
-- `config-file-io.ts` にコメントあり：クレデンシャルファイルを1ファイルに統合したい（現状はドメインごとにパスワードが必要）
-- `server.ts` にコメントあり：ブラウザ自動起動しないマニュアルモードの追加
-- `moment` と `date-fns` が混在している（要統一）
-- SSL証明書は30日ごとに再生成される仕組みだが、`@ts-expect-error` を使っている箇所あり
+- トークン: `~/.config/gyuma/tokens.json`（ドメインをキーとした JSON）
+- クレデンシャル: `~/.config/gyuma/credentials`（INI 形式・プレーンテキスト）
+- 証明書: `~/.config/gyuma/certs/`
 
 ## 開発ブランチ運用
 
 - `main` - リリースブランチ
-- `feature/design` - 設計ドキュメント作業ブランチ
-- `feature/go-rewrite` - Go 版実装ブランチ
+- `feature/go-rewrite` - Go 版実装ブランチ（現在の作業ブランチ）
 - `nodejs-archive` - Node.js 版のコードを保存（参照用・変更しない）
 
 ## 注意事項
 
-- `feature/design` ブランチではコードの変更は行わない（設計書の作成・更新のみ）
 - Go 版の実装は `feature/go-rewrite` ブランチで行う
-- SSL証明書（`ssl/` 配下）は `.gitignore` に含めること（自動生成されるため）
-- PAT はチャット完了後に必ず Revoke すること
+- SSL証明書（`ssl/` 配下）は `.gitignore` に含める
+- `bin/` ディレクトリはビルド出力先で `.gitignore` に含める
