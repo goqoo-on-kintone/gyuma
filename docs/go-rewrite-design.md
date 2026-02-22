@@ -286,10 +286,72 @@ Phase 4 は Phase 3 から最低 6 ヶ月以上の猶予を設ける。
 
 ---
 
+## クレデンシャルの暗号化設計
+
+### 現行（Node.js版）の問題点
+
+現行の `encrypt.ts` には以下のセキュリティ上の問題がある：
+
+1. **ソルトが固定値**（致命的）
+   ```ts
+   const SALT = 'lKzR+i6IwG/DbuAY5thksw=='  // 全ユーザー共通
+   ```
+   ソルトが固定だとレインボーテーブル攻撃が有効になり、同じパスワードを使うユーザー間で同じ鍵が生成される。
+
+2. **AES-256-CBC モード**（軽微）
+   改ざん検知ができない。ファイルを書き換えられても気づけない。
+
+### Go版での採用方式
+
+| 項目 | 現行（Node.js） | Go 版 |
+|---|---|---|
+| KDF | scrypt | scrypt（継続） |
+| ソルト | **固定値** | **ランダム生成・ファイルに同梱** |
+| 暗号化モード | AES-256-CBC | **AES-256-GCM** |
+| 改ざん検知 | なし | **あり**（GCM の AuthTag） |
+
+互換性は維持しない。Go 版インストール後の初回実行時に再認証が必要になる。
+
+### ファイルフォーマット（Go版）
+
+```
+[salt 32byte][nonce 12byte][ciphertext][authTag 16byte]
+→ Base64 エンコードして保存
+```
+
+### scrypt パラメータ
+
+対話型用途の標準的な値を採用する：
+
+```go
+key, _ := scrypt.Key([]byte(password), salt, 32768, 8, 1, 32)
+// N=32768（CPU/メモリコスト）, r=8, p=1
+```
+
+---
+
+## `bin/gyuma` シムの設計
+
+Windows 対応のため、シェルスクリプトではなく **JS ファイル** を採用する。
+
+```js
+#!/usr/bin/env node
+// bin/gyuma.js
+const { spawnSync } = require('child_process')
+const { resolveBinaryPath } = require('../lib/resolve-binary')
+
+const result = spawnSync(resolveBinaryPath(), process.argv.slice(2), {
+  stdio: 'inherit',  // stdin/stdout/stderr すべて継承（CLIとして透過的に動作）
+})
+process.exit(result.status ?? 1)
+```
+
+CLI として使う場合は stdio をすべて `inherit` にする（JS API と異なる点）。
+
+---
+
 ## 検討事項・未決事項
 
 - [ ] `refresh_token` の扱い：現行は保存しない設計だが、Go 版で対応するか
-- [ ] クレデンシャルの暗号化アルゴリズム：現行 Node.js 版との互換性をどう持たせるか（移行時にキャッシュを再利用したい場合）
 - [ ] `noprompt` モードでの CI/CD 利用シナリオを Go 版でも整備するか
 - [ ] Windows での自己署名証明書の扱い（trust store への登録が必要な場合がある）
-- [ ] `gyuma` npm パッケージの `bin/gyuma` シムは JS ファイルにするかシェルスクリプトにするか（Windows 対応の観点から JS が無難）
