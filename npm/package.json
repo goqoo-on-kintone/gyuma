@@ -1,0 +1,31 @@
+{
+  "name": "gyuma",
+  "version": "0.0.0",
+  "description": "OAuth 2.0 CLI tool for kintone",
+  "bin": {
+    "gyuma": "./bin/gyuma.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/goqoo-on-kintone/gyuma.git"
+  },
+  "homepage": "https://github.com/goqoo-on-kintone/gyuma",
+  "bugs": {
+    "url": "https://github.com/goqoo-on-kintone/gyuma/issues"
+  },
+  "keywords": [
+    "kintone",
+    "oauth",
+    "oauth2",
+    "cli",
+    "authentication"
+  ],
+  "author": "goqoo-on-kintone",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
