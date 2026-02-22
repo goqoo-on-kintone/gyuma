@@ -12,36 +12,71 @@ Go で書き直すことで以下を実現する：
 
 ---
 
-## 採用アーキテクチャ：Goバイナリ ＋ 薄いNode.jsラッパー
+## Gyuma ファミリーのパッケージ構成
 
-esbuild・Biome・Prisma・SWC など、Go/Rust 製ツールを npm でも配布している主要 OSS が採用しているパターンを踏襲する。
+Gyuma を単一のツールとして閉じず、用途・利用者ごとに責務を分割したパッケージファミリーとして設計する。
+
+### パッケージ一覧
+
+| パッケージ | 言語 | 位置づけ | 主な利用者 |
+|---|---|---|---|
+| `gyuma-core`（Go） | Go | kintone OAuth コアライブラリ | GoのWebサービス開発者 |
+| `@goqoo/gyuma-core` | TypeScript | kintone OAuth コアライブラリ | JS/TSのWebサービス開発者 |
+| `@goqoo/gyuma-cli` | Go | CLIツール本体（Goバイナリ） | エンドユーザー（CLI） |
+| `@goqoo/gyuma` | TypeScript | JSラッパー | Node.js CLIツール（Ginueなど）、Node.jsから使いたい人 |
+
+### 依存関係
 
 ```
-┌─────────────────────────────────────────┐
-│  呼び出し元                              │
-│  ・JS/TS から require('gyuma')           │
-│  ・シェルスクリプトから gyuma CLI         │
-│  ・Python/Ruby など他言語からバイナリ直接  │
-└────────────┬────────────────────────────┘
-             │
-┌────────────▼────────────────────────────┐
-│  Node.js ラッパー（薄い）                │
-│  gyuma npm パッケージ                    │
-│  ・JS API (require/import) を提供        │
-│  ・内部で Go バイナリを child_process で起動│
-│  ・access_token を stdout からキャプチャ  │
-└────────────┬────────────────────────────┘
-             │ spawn
-┌────────────▼────────────────────────────┐
-│  Go バイナリ                             │
-│  ・クレデンシャル取得（優先順位に従う）    │
-│  ・OAuth フロー全体を担う                 │
-│  ・HTTPS サーバー起動                    │
-│  ・ブラウザ自動起動                       │
-│  ・トークンキャッシュ（ファイル）          │
-│  ・access_token を stdout に出力して終了  │
-└─────────────────────────────────────────┘
+gyuma-core（Go）                    @goqoo/gyuma-core（TS）
+kintone OAuth 薄いライブラリ         kintone OAuth 薄いライブラリ
+・GenerateAuthURL()                  ・generateAuthURL()
+・ExchangeCode()                     ・exchangeCode()
+・RefreshToken()                     ・refreshToken()
+        ↑
+@goqoo/gyuma-cli（Goバイナリ）
+CLIツール本体
+・クレデンシャル取得（優先順位に従う）
+・HTTPS サーバー起動
+・ブラウザ自動起動
+・トークンキャッシュ
+・access_token を stdout に出力して終了
+        ↑
+@goqoo/gyuma（JSラッパー）
+・child_process で Goバイナリを呼ぶ
+・access_token を stdout からキャプチャ
+・Node.js の require()/import に対応
 ```
+
+### 利用者ごとの使い方
+
+**GoのWebサービス開発者**  
+`gyuma-core`（Go）を直接 import して使う。CLIバイナリは不要。
+
+**JS/TSのWebサービス開発者**  
+`@goqoo/gyuma-core` を直接 import して使う。CLIバイナリは不要。
+
+**CLIエンドユーザー**  
+`@goqoo/gyuma-cli` のGoバイナリを直接使う。
+
+**Node.jsのCLIツール開発者（Ginueなど）**  
+`@goqoo/gyuma` を `require()` する。内部でGoバイナリを呼ぶことを意識する必要はなく、`access_token` が返ってくればよい。
+
+### WebサービスへのCLIバイナリ組み込みは非推奨
+
+`@goqoo/gyuma`（JSラッパー）は `child_process` でGoバイナリを起動する設計であり、Webサービスのバックエンドに組み込む用途には適さない。Webサービス開発者は対応言語のコアライブラリを直接使うこと。
+
+### リポジトリ構成
+
+言語をまたぐパッケージは別リポジトリで管理する。
+
+| リポジトリ | 内容 |
+|---|---|
+| `goqoo-on-kintone/gyuma` | `@goqoo/gyuma-cli`（Goバイナリ）+ `@goqoo/gyuma`（JSラッパー） |
+| `goqoo-on-kintone/gyuma-core-ts` | `@goqoo/gyuma-core`（TypeScript） |
+| `goqoo-on-kintone/gyuma-core-go` | `gyuma-core`（Go） |
+
+`@goqoo/gyuma-cli` と `@goqoo/gyuma` は密結合しているため同一リポジトリで管理する。
 
 ---
 
@@ -78,8 +113,6 @@ GYUMA_CLIENT_ID=xxx GYUMA_CLIENT_SECRET=yyy gyuma --domain a.cybozu.com --scope 
 # ドメインBにアクセス
 GYUMA_CLIENT_ID=xxx GYUMA_CLIENT_SECRET=yyy gyuma --domain b.cybozu.com --scope "..."
 ```
-
-グローバルな環境変数を書き換えることなく、呼び出しごとに安全に切り替えられる。
 
 ### クレデンシャルファイル（プレーンテキスト）
 
@@ -154,39 +187,41 @@ Go 版では機能として実装するが、**デフォルトは無効・オプ
 
 ---
 
-## Go バイナリの設計
+## @goqoo/gyuma-cli（Goバイナリ）の設計
 
 ### ディレクトリ構成
 
 ```
-gyuma/                        ← リポジトリルート
+gyuma/                              ← リポジトリルート（goqoo-on-kintone/gyuma）
 ├── cmd/
 │   └── gyuma/
-│       └── main.go           # エントリポイント
+│       └── main.go                 # エントリポイント
 ├── internal/
 │   ├── auth/
-│   │   ├── server.go         # HTTPS サーバー / OAuth フロー
-│   │   └── token.go          # トークンキャッシュ読み書き
+│   │   ├── server.go               # HTTPS サーバー / OAuth フロー
+│   │   └── token.go                # トークンキャッシュ読み書き
 │   ├── config/
-│   │   ├── credentials.go    # クレデンシャル読み込み（優先順位制御）
-│   │   └── paths.go          # 設定ディレクトリパス
+│   │   ├── credentials.go          # クレデンシャル読み込み（優先順位制御）
+│   │   └── paths.go                # 設定ディレクトリパス
 │   ├── browser/
-│   │   └── open.go           # ブラウザ起動（OS別）
+│   │   └── open.go                 # ブラウザ起動（OS別）
 │   └── cert/
-│       └── cert.go           # 自己署名証明書生成
-├── npm/                      # npm 関連ファイル
-│   ├── gyuma/                # メインパッケージ
+│       └── cert.go                 # 自己署名証明書生成
+├── npm/
+│   ├── gyuma-cli/                  # @goqoo/gyuma-cli パッケージ
+│   │   └── package.json
+│   ├── gyuma/                      # @goqoo/gyuma パッケージ（JSラッパー）
 │   │   ├── package.json
 │   │   ├── lib/
-│   │   │   └── index.ts      # JS ラッパー
+│   │   │   └── index.ts
 │   │   └── bin/
-│   │       └── gyuma.js      # CLI シム（JS ファイル）
-│   └── gyuma-platform/       # プラットフォームパッケージのテンプレート
+│   │       └── gyuma.js
+│   └── gyuma-platform/             # プラットフォームパッケージのテンプレート
 │       └── package.json
 ├── go.mod
 ├── go.sum
 ├── docs/
-│   └── go-rewrite-design.md  # 本ドキュメント
+│   └── go-rewrite-design.md
 └── CLAUDE.md
 ```
 
@@ -211,7 +246,7 @@ gyuma [options]
 
 > 現行にあった `--password`（クレデンシャル暗号化パスワード）は暗号化廃止に伴い削除。
 
-**標準出力**: `access_token` のみ（JS ラッパーがキャプチャする）  
+**標準出力**: `access_token` のみ（JSラッパーがキャプチャする）  
 **標準エラー**: ログ・エラーメッセージ（ユーザーに見せる情報）
 
 ### OAuth フロー
@@ -243,45 +278,43 @@ gyuma [options]
 
 ---
 
-## npm パッケージ構成
+## @goqoo/gyuma（JSラッパー）の設計
+
+### npm パッケージ構成
 
 | パッケージ名 | 内容 |
 |---|---|
-| `gyuma` | JS ラッパー（メインパッケージ） |
-| `gyuma-darwin-arm64` | Go バイナリ（Apple Silicon） |
-| `gyuma-darwin-x64` | Go バイナリ（Intel Mac） |
-| `gyuma-linux-x64` | Go バイナリ（Linux x86_64） |
-| `gyuma-linux-arm64` | Go バイナリ（Linux ARM64） |
-| `gyuma-win32-x64` | Go バイナリ（Windows x64） |
+| `@goqoo/gyuma` | JSラッパー（メインパッケージ） |
+| `@goqoo/gyuma-darwin-arm64` | Goバイナリ（Apple Silicon） |
+| `@goqoo/gyuma-darwin-x64` | Goバイナリ（Intel Mac） |
+| `@goqoo/gyuma-linux-x64` | Goバイナリ（Linux x86_64） |
+| `@goqoo/gyuma-linux-arm64` | Goバイナリ（Linux ARM64） |
+| `@goqoo/gyuma-win32-x64` | Goバイナリ（Windows x64） |
 
-### メインパッケージの package.json
+### package.json
 
 ```json
 {
-  "name": "gyuma",
+  "name": "@goqoo/gyuma",
   "version": "1.0.0",
   "main": "./lib/index.js",
   "bin": {
     "gyuma": "./bin/gyuma.js"
   },
   "optionalDependencies": {
-    "gyuma-darwin-arm64": "1.0.0",
-    "gyuma-darwin-x64": "1.0.0",
-    "gyuma-linux-x64": "1.0.0",
-    "gyuma-linux-arm64": "1.0.0",
-    "gyuma-win32-x64": "1.0.0"
+    "@goqoo/gyuma-darwin-arm64": "1.0.0",
+    "@goqoo/gyuma-darwin-x64": "1.0.0",
+    "@goqoo/gyuma-linux-x64": "1.0.0",
+    "@goqoo/gyuma-linux-arm64": "1.0.0",
+    "@goqoo/gyuma-win32-x64": "1.0.0"
   }
 }
 ```
 
----
-
-## Node.js ラッパー（JS API）の設計
-
 ### JS API
 
 ```ts
-import { gyuma } from 'gyuma'
+import { gyuma } from '@goqoo/gyuma'
 
 const token = await gyuma({
   domain: 'example.cybozu.com',
@@ -290,8 +323,6 @@ const token = await gyuma({
   scope: 'k:app_settings:read k:app_settings:write',
 })
 ```
-
-> 現行にあった `password` フィールドは暗号化廃止に伴い削除。
 
 ### ラッパーの実装方針
 
@@ -307,13 +338,12 @@ export const gyuma = (argv: Argv): Promise<string> => {
     const child = spawn(bin, args, {
       stdio: ['inherit', 'pipe', 'inherit'],
       //      ↑ stdin 継承      ↑ stdout キャプチャ  ↑ stderr 継承
-      //        （プロンプト入力など）                  （エラー表示）
     })
 
     let stdout = ''
     child.stdout.on('data', (data) => { stdout += data })
     child.on('close', (code) => {
-      if (code === 0) resolve(stdout.trim()) // access_token
+      if (code === 0) resolve(stdout.trim())
       else reject(new Error(`gyuma exited with code ${code}`))
     })
   })
@@ -322,8 +352,7 @@ export const gyuma = (argv: Argv): Promise<string> => {
 
 ### `bin/gyuma.js` シム（CLI用）
 
-Windows 対応のためシェルスクリプトではなく JS ファイルを採用。  
-CLI として使う場合は stdio をすべて `inherit` にして Go バイナリに完全委譲する。
+Windows 対応のためシェルスクリプトではなく JS ファイルを採用。
 
 ```js
 #!/usr/bin/env node
@@ -334,28 +363,6 @@ const result = spawnSync(resolveBinaryPath(), process.argv.slice(2), {
   stdio: 'inherit',
 })
 process.exit(result.status ?? 1)
-```
-
-### バイナリパス解決（resolve-binary.ts）
-
-```ts
-import { platform, arch } from 'os'
-
-export const resolveBinaryPath = (): string => {
-  const os = platform()  // darwin / linux / win32
-  const cpu = arch()     // arm64 / x64
-
-  const pkgName = `gyuma-${os}-${cpu}`
-
-  try {
-    return require.resolve(`${pkgName}/bin/gyuma`)
-  } catch {
-    throw new Error(
-      `Unsupported platform: ${os}/${cpu}. ` +
-      `Please install manually: npm install ${pkgName}`
-    )
-  }
-}
 ```
 
 ---
@@ -377,10 +384,8 @@ strategy:
 
 steps:
   - run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o gyuma ./cmd/gyuma
-  - run: npm publish  # 各プラットフォームパッケージを publish
+  - run: npm publish
 ```
-
-Go のクロスコンパイルは `GOOS` と `GOARCH` を指定するだけで CGO 不使用なら追加ツール不要。
 
 ---
 
@@ -388,13 +393,14 @@ Go のクロスコンパイルは `GOOS` と `GOARCH` を指定するだけで C
 
 | フェーズ | 内容 | バージョン |
 |---|---|---|
-| **Phase 1** | Go バイナリの実装・テスト | - |
-| **Phase 2** | npm パッケージ構成の整備・JS ラッパー実装 | 1.0.0-beta |
-| **Phase 3** | Node.js 版を deprecated に（README・npm に明記） | 1.0.0 |
-| **Phase 4** | Node.js 版コードをリポジトリから削除 | 2.0.0（将来） |
+| **Phase 1** | `gyuma-core`（Go）と `@goqoo/gyuma-core`（TS）の実装 | - |
+| **Phase 2** | `@goqoo/gyuma-cli` Goバイナリの実装・テスト | - |
+| **Phase 3** | `@goqoo/gyuma` JSラッパーの実装、npm パッケージ構成の整備 | 1.0.0-beta |
+| **Phase 4** | 既存の `gyuma` npm パッケージを deprecated に（README・npm に明記） | 1.0.0 |
+| **Phase 5** | 既存の `gyuma` npm パッケージのコードを削除 | 2.0.0（将来） |
 
-Phase 3 では `package.json` の `deprecated` フィールドと README に移行案内を記載する。  
-Phase 4 は Phase 3 から最低 6 ヶ月以上の猶予を設ける。
+Phase 4 では `package.json` の `deprecated` フィールドと README に `@goqoo/gyuma` への移行案内を記載する。  
+Phase 5 は Phase 4 から最低 6 ヶ月以上の猶予を設ける。
 
 ### Node.js 版からの移行時の注意点
 
@@ -406,4 +412,4 @@ Phase 4 は Phase 3 から最低 6 ヶ月以上の猶予を設ける。
 ## 検討事項・未決事項
 
 - [ ] `--noprompt` モードでの CI/CD 利用シナリオを Go 版でも整備するか（将来検討）
-- [ ] Windows での自己署名証明書の扱い（trust store への登録が必要な場合がある）
+- [ ] Windows での自己署名証明書の扱い（kintone は HTTPS 必須のため HTTP への変更は不可。開発者ツールとして自己署名証明書の警告を受け入れる運用を想定）
