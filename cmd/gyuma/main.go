@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/goqoo-on-kintone/gyuma/internal/auth"
-	"github.com/goqoo-on-kintone/gyuma/internal/browser"
 	"github.com/goqoo-on-kintone/gyuma/internal/cert"
 	"github.com/goqoo-on-kintone/gyuma/internal/config"
 )
@@ -121,20 +120,6 @@ func runMain() error {
 	}
 
 	// 新規取得が必要な場合は OAuth フローを実行
-	// mkcert 証明書がない場合は警告を表示（RunOAuthFlow 内で表示される）
-
-	// 認可 URL を生成してブラウザを開く
-	authURL, _, err := auth.GetAuthURL(oauthConfig)
-	if err != nil {
-		return err
-	}
-
-	fmt.Fprintf(os.Stderr, "Opening browser for authorization...\n")
-	if err := browser.Open(authURL); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open browser. Please visit:\n%s\n", authURL)
-	}
-
-	// OAuth フローを実行
 	accessToken, err := auth.RunOAuthFlow(oauthConfig)
 	if err != nil {
 		return err

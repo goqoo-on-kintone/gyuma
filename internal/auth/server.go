@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -117,10 +119,17 @@ func RunOAuthFlow(cfg *OAuthConfig) (string, error) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		fmt.Fprintf(w, `<!DOCTYPE html>
 <html>
-<head><title>Authorization Successful</title></head>
+<head>
+  <title>Authorization Successful</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 50px; }
+    h1 { color: #333; }
+    p { color: #666; font-size: 18px; }
+  </style>
+</head>
 <body>
-<h1>Authorization Successful!</h1>
-<p>You can close this window now.</p>
+<h1>🎉 Authorization Successful!</h1>
+<p>✨ You can close this window now ✨</p>
 <script>window.close();</script>
 </body>
 </html>`)
@@ -135,13 +144,12 @@ func RunOAuthFlow(cfg *OAuthConfig) (string, error) {
 		}
 	}()
 
-	// 認可 URL を生成
+	// 認可 URL を生成してブラウザを開く
 	authURL := buildAuthURL(cfg, state, redirectURI)
 	fmt.Fprintf(os.Stderr, "Opening browser for authorization...\n")
-	fmt.Fprintf(os.Stderr, "If the browser doesn't open, please visit:\n%s\n\n", authURL)
-
-	// ブラウザを起動（browser パッケージを使用）
-	// この部分は後で browser パッケージを実装後に追加
+	if err := openBrowser(authURL); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to open browser. Please visit:\n%s\n\n", authURL)
+	}
 
 	// 結果を待機
 	select {
@@ -286,4 +294,20 @@ func GetAuthURL(cfg *OAuthConfig) (string, string, error) {
 	}
 	redirectURI := fmt.Sprintf("https://localhost:%d/oauth2callback", cfg.Port)
 	return buildAuthURL(cfg, state, redirectURI), state, nil
+}
+
+// openBrowser は OS に応じたブラウザを開く
+func openBrowser(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "linux":
+		cmd = exec.Command("xdg-open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+	return cmd.Start()
 }
