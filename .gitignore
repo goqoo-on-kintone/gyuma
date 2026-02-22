@@ -2,9 +2,6 @@
 bin/
 dist/
 
-# SSL certificates (auto-generated)
-ssl/*.pem
-
 # Secrets
 secret/
 .env
