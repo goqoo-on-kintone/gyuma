@@ -61,11 +61,12 @@ gyuma（npm）
 
 ### 基本思想
 
-暗号化機能は **Gyuma から完全に廃止する**。
-
-クレデンシャル（client_id / client_secret）の保護は、ユーザーが適切なツールで行う責務とする。  
+クレデンシャル（client_id / client_secret）はプレーンテキストで保存する。  
 これは `~/.aws/credentials` をプレーンテキストで保存する AWS SDK と同じ思想。  
 1Password CLI や macOS Keychain などを使いたいユーザーは、Gyuma を介さず環境変数で渡せばよい。
+
+ただし、`credentials.gpg`（GPG 暗号化ファイル）が存在する場合はそちらを優先して読み込む。  
+GPG を使いたいユーザー向けのオプトイン機能として提供する。
 
 ### クレデンシャル取得の優先順位
 
@@ -74,8 +75,9 @@ gyuma（npm）
 ```
 1. CLIオプション（--client-id, --client-secret）
 2. 環境変数（GYUMA_CLIENT_ID, GYUMA_CLIENT_SECRET）
-3. ~/.config/gyuma/credentials の該当ドメインセクション
-4. インタラクティブな入力プロンプト（--noprompt なしの場合）
+3. ~/.config/gyuma/credentials.gpg の該当ドメインセクション（GPG 復号）
+4. ~/.config/gyuma/credentials の該当ドメインセクション（プレーンテキスト）
+5. インタラクティブな入力プロンプト（--noprompt なしの場合）
 ```
 
 ### 環境変数について
@@ -109,6 +111,51 @@ client_secret = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ファイルのパーミッションは作成時に自動で `600` に設定する。
 
+### クレデンシャルファイル（GPG 暗号化）
+
+GPG を使いたいユーザー向けのオプトイン機能。フォーマットは平文版と同じ INI 形式。
+
+**保存先**: `~/.config/gyuma/credentials.gpg`
+
+#### 初回セットアップ
+
+初回は平文の `credentials` に保存し、ユーザーが自分で暗号化する：
+
+```bash
+# gyuma がクレデンシャルを credentials（平文）に保存した後
+gpg --encrypt --recipient your@email.com ~/.config/gyuma/credentials
+# → credentials.gpg が生成される
+rm ~/.config/gyuma/credentials  # 平文を削除
+```
+
+以降は `credentials.gpg` が優先して読み込まれる。
+
+#### クレデンシャルの追記（credentials.gpg が存在する場合）
+
+`--save-credentials` でクレデンシャルを保存する際、`credentials.gpg` が既に存在する場合は：
+
+```
+1. gpg --decrypt で復号（メモリ上に展開）
+2. 該当ドメインのセクションを更新/追加
+3. 既存ファイルの受取人情報を gpg --list-packets で取得
+4. 同じ受取人で gpg --encrypt して credentials.gpg に書き戻し
+```
+
+ユーザーが受取人（`--recipient`）を指定する必要はなく、既存ファイルから自動取得する。
+
+```go
+// 受取人を既存 .gpg ファイルから自動取得するイメージ
+packets, _ := exec.Command("gpg", "--list-packets", credentialsGpgPath).Output()
+recipient := parseKeyID(packets) // "keyid XXXXXXXX" の行をパース
+
+// 復号 → 編集 → 暗号化
+plain, _ := exec.Command("gpg", "--decrypt", credentialsGpgPath).Output()
+updated := updateINI(plain, domain, clientID, clientSecret)
+cmd := exec.Command("gpg", "--encrypt", "--recipient", recipient, "--output", credentialsGpgPath)
+cmd.Stdin = strings.NewReader(updated)
+cmd.Run()
+```
+
 ---
 
 ## ファイル構成
@@ -116,6 +163,7 @@ client_secret = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 ~/.config/gyuma/
 ├── credentials       # クレデンシャル（プレーンテキスト・任意）
+├── credentials.gpg   # クレデンシャル（GPG 暗号化・任意）※存在する場合はこちらを優先
 └── tokens.json       # トークンキャッシュ（ドメインをキーとした JSON）
 ```
 
