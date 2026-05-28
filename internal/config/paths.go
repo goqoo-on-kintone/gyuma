@@ -25,14 +25,22 @@ func TokensFile() (string, error) {
 	return filepath.Join(dir, "tokens.json"), nil
 }
 
-// CredentialsFile はクレデンシャルファイルのパスを返す
-// ~/.config/gyuma/credentials
-func CredentialsFile() (string, error) {
-	dir, err := ConfigDir()
+// NetrcFile は ~/.netrc のパスを返す
+func NetrcFile() (string, error) {
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "credentials"), nil
+	return filepath.Join(home, ".netrc"), nil
+}
+
+// NetrcGPGFile は ~/.netrc.gpg のパスを返す
+func NetrcGPGFile() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".netrc.gpg"), nil
 }
 
 // CertsDir は証明書ディレクトリのパスを返す

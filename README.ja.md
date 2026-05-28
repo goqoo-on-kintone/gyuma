@@ -70,9 +70,8 @@ gyuma -d example.cybozu.com \
 # リフレッシュトークンを使用
 gyuma -d example.cybozu.com -S "k:app_settings:read" --refresh-token
 
-# クレデンシャルを保存して次回以降に利用
-gyuma -d example.cybozu.com -i YOUR_CLIENT_ID -s YOUR_CLIENT_SECRET \
-  -S "k:app_settings:read" --save-credentials
+# クレデンシャルを ~/.netrc（machine <domain>:oauth）に書いておけば -i/-s を省略できる
+gyuma -d example.cybozu.com -S "k:app_settings:read"
 ```
 
 ### 証明書のセットアップ
@@ -100,7 +99,6 @@ gyuma setup-cert
 | `--scope` | `-S` | | OAuth2 スコープ（必須） |
 | `--port` | `-P` | `3000` | ローカルサーバーのポート |
 | `--refresh-token` | | `false` | リフレッシュトークンを保存・使用 |
-| `--save-credentials` | | `false` | クレデンシャルをファイルに保存 |
 | `--noprompt` | | `false` | 対話入力を無効化 |
 | `--quiet` | | `false` | 警告メッセージを抑制 |
 | `--version` | `-v` | | バージョンを表示 |
@@ -122,15 +120,28 @@ gyuma setup-cert
 
 1. CLI オプション（`-i`、`-s`）
 2. 環境変数（`GYUMA_CLIENT_ID`、`GYUMA_CLIENT_SECRET`）
-3. クレデンシャルファイル（`~/.config/gyuma/credentials`）
-4. 対話プロンプト（`--noprompt` でない場合）
+3. `~/.netrc.gpg` — `machine <domain>:oauth` エントリ（`gpg` で復号）
+4. `~/.netrc` — `machine <domain>:oauth` エントリ
+5. 対話プロンプト（`--noprompt` でない場合）
+
+gyuma は `.netrc` を読み込むだけで書き込みはしません。エントリは自分で追記してください：
+
+```
+machine example.cybozu.com:oauth
+  login    YOUR_CLIENT_ID
+  password YOUR_CLIENT_SECRET
+```
+
+`:oauth` suffix により、kintone のユーザー認証（`machine example.cybozu.com`）と OAuth
+クレデンシャルを分離できます。ginue も同じ `.netrc` を読むため、認証情報を共有できます。
+暗号化したい場合は `~/.netrc.gpg` を `gpg` で自分で管理してください（gyuma は読み込み・復号のみ）。
 
 ### ファイルの保存先
 
 | ファイル | パス | 説明 |
 |---------|------|------|
 | トークン | `~/.config/gyuma/tokens.json` | キャッシュされたアクセス/リフレッシュトークン |
-| クレデンシャル | `~/.config/gyuma/credentials` | 保存されたクライアント認証情報（INI 形式） |
+| クレデンシャル | `~/.netrc` または `~/.netrc.gpg` | OAuth クライアント認証情報（`machine <domain>:oauth`・読み込み専用） |
 | 証明書 | `~/.config/gyuma/certs/` | ローカルサーバー用の SSL 証明書 |
 
 ### 環境変数

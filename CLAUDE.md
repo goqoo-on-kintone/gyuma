@@ -21,7 +21,7 @@ API としての利用と、CLI ツールとしての利用の両方をサポー
 - **主要パッケージ**:
   - `net/http` - HTTPS サーバー / OAuth コールバック
   - `crypto/x509` - 自己署名証明書生成
-  - `gopkg.in/ini.v1` - クレデンシャルファイル（INI 形式）のパース
+  - `github.com/bgentry/go-netrc/netrc` - `.netrc` のパース（`<domain>:oauth` machine を読む）
 
 ## ディレクトリ構成（Go 版）
 
@@ -84,7 +84,7 @@ gyuma setup-cert [options]         # mkcert 証明書のセットアップ
 
 - 設定ルート: `~/.config/gyuma/`
 - トークン: `~/.config/gyuma/tokens.json`（ドメインをキーとした JSON）
-- クレデンシャル: `~/.config/gyuma/credentials`（INI 形式・プレーンテキスト）
+- クレデンシャル: `~/.netrc` または `~/.netrc.gpg` の `machine <domain>:oauth`（読み込み専用・gyuma は書き込まない）
 - 証明書: `~/.config/gyuma/certs/`
 
 ## 開発ブランチ運用
