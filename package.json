@@ -11,7 +11,6 @@
     "build": "yarn cleanup && tsc",
     "cleanup": "rm -rf dist",
     "test": "jest",
-    "preinstall": "typesync || true",
     "postinstall": "mkdir -p ssl"
   },
   "repository": {
