@@ -2,11 +2,11 @@ package config
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
-
-	"gopkg.in/ini.v1"
 )
 
 // Credentials は OAuth クレデンシャルを保持する
@@ -21,7 +21,8 @@ type CredentialsSource int
 const (
 	SourceCLI CredentialsSource = iota
 	SourceEnv
-	SourceFile
+	SourceNetrcGPG
+	SourceNetrc
 	SourcePrompt
 )
 
@@ -31,8 +32,10 @@ func (s CredentialsSource) String() string {
 		return "CLI options"
 	case SourceEnv:
 		return "environment variables"
-	case SourceFile:
-		return "credentials file"
+	case SourceNetrcGPG:
+		return "~/.netrc.gpg"
+	case SourceNetrc:
+		return "~/.netrc"
 	case SourcePrompt:
 		return "interactive prompt"
 	default:
@@ -41,7 +44,7 @@ func (s CredentialsSource) String() string {
 }
 
 // GetCredentials は優先順位に従ってクレデンシャルを取得する
-// 優先順位: CLI オプション → 環境変数 → ファイル → プロンプト
+// 優先順位: CLI オプション → 環境変数 → ~/.netrc.gpg → ~/.netrc → プロンプト
 func GetCredentials(domain, cliClientID, cliClientSecret string, noPrompt bool) (*Credentials, CredentialsSource, error) {
 	// 1. CLI オプション
 	if cliClientID != "" && cliClientSecret != "" {
@@ -61,56 +64,68 @@ func GetCredentials(domain, cliClientID, cliClientSecret string, noPrompt bool) 
 		}, SourceEnv, nil
 	}
 
-	// 3. クレデンシャルファイル
-	creds, err := loadCredentialsFromFile(domain)
-	if err == nil && creds != nil {
-		return creds, SourceFile, nil
+	// 3. ~/.netrc.gpg（GPG 復号）
+	if creds, err := loadFromNetrcGPG(domain); err == nil && creds != nil {
+		return creds, SourceNetrcGPG, nil
 	}
 
-	// 4. インタラクティブプロンプト
+	// 4. ~/.netrc
+	if creds, err := loadFromNetrc(domain); err == nil && creds != nil {
+		return creds, SourceNetrc, nil
+	}
+
+	// 5. インタラクティブプロンプト
 	if noPrompt {
 		return nil, 0, fmt.Errorf("credentials not found and --noprompt is set")
 	}
 
-	creds, err = promptCredentials()
+	creds, err := promptCredentials()
 	if err != nil {
 		return nil, 0, err
 	}
 	return creds, SourcePrompt, nil
 }
 
-// loadCredentialsFromFile はクレデンシャルファイルから指定ドメインのクレデンシャルを読み込む
-func loadCredentialsFromFile(domain string) (*Credentials, error) {
-	path, err := CredentialsFile()
+// loadFromNetrc は ~/.netrc から <domain>:oauth クレデンシャルを読み込む
+func loadFromNetrc(domain string) (*Credentials, error) {
+	path, err := NetrcFile()
 	if err != nil {
 		return nil, err
 	}
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("credentials file not found: %s", path)
-	}
-
-	cfg, err := ini.Load(path)
+	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load credentials file: %w", err)
+		return nil, err
 	}
+	defer f.Close()
+	return findOAuthCredentials(f, domain)
+}
 
-	section, err := cfg.GetSection(domain)
+// loadFromNetrcGPG は ~/.netrc.gpg を gpg で復号して <domain>:oauth クレデンシャルを読み込む
+func loadFromNetrcGPG(domain string) (*Credentials, error) {
+	path, err := NetrcGPGFile()
 	if err != nil {
-		return nil, fmt.Errorf("domain section not found: %s", domain)
+		return nil, err
 	}
-
-	clientID := section.Key("client_id").String()
-	clientSecret := section.Key("client_secret").String()
-
-	if clientID == "" || clientSecret == "" {
-		return nil, fmt.Errorf("incomplete credentials for domain: %s", domain)
+	if _, err := os.Stat(path); err != nil {
+		return nil, err
 	}
+	decrypted, err := decryptGPG(path)
+	if err != nil {
+		return nil, err
+	}
+	return findOAuthCredentials(bytes.NewReader(decrypted), domain)
+}
 
-	return &Credentials{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-	}, nil
+// decryptGPG は gpg コマンドにファイルを渡して復号し平文を返す。
+// パスフレーズ入力・鍵管理は gpg-agent / pinentry に委ねる（gyuma 自身は扱わない）。
+func decryptGPG(path string) ([]byte, error) {
+	cmd := exec.Command("gpg", "--quiet", "--decrypt", path)
+	cmd.Stderr = os.Stderr // pinentry プロンプトや進捗メッセージはそのまま表示
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt %s with gpg: %w", path, err)
+	}
+	return out, nil
 }
 
 // promptCredentials はインタラクティブにクレデンシャルを入力させる
@@ -139,45 +154,4 @@ func promptCredentials() (*Credentials, error) {
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 	}, nil
-}
-
-// SaveCredentials はクレデンシャルをファイルに保存する
-func SaveCredentials(domain string, creds *Credentials) error {
-	if err := EnsureConfigDir(); err != nil {
-		return err
-	}
-
-	path, err := CredentialsFile()
-	if err != nil {
-		return err
-	}
-
-	var cfg *ini.File
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		cfg = ini.Empty()
-	} else {
-		cfg, err = ini.Load(path)
-		if err != nil {
-			return fmt.Errorf("failed to load credentials file: %w", err)
-		}
-	}
-
-	section, err := cfg.NewSection(domain)
-	if err != nil {
-		return fmt.Errorf("failed to create section: %w", err)
-	}
-
-	section.Key("client_id").SetValue(creds.ClientID)
-	section.Key("client_secret").SetValue(creds.ClientSecret)
-
-	if err := cfg.SaveTo(path); err != nil {
-		return fmt.Errorf("failed to save credentials file: %w", err)
-	}
-
-	// パーミッションを 600 に設定
-	if err := os.Chmod(path, 0600); err != nil {
-		return fmt.Errorf("failed to set file permissions: %w", err)
-	}
-
-	return nil
 }

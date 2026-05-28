@@ -61,11 +61,37 @@ gyuma（npm）
 
 ### 基本思想
 
-暗号化機能は **Gyuma から完全に廃止する**。
+**設計原則: gyuma に機能をいたずらに盛り込まず、責務を絞ってシンプルに保つ。**  
+クレデンシャル管理の責務は外部ツール（`.netrc` / ginue / GPG）に委譲し、gyuma 自身は「読み込み」と「OAuth フロー」に専念する。
 
-クレデンシャル（client_id / client_secret）の保護は、ユーザーが適切なツールで行う責務とする。  
-これは `~/.aws/credentials` をプレーンテキストで保存する AWS SDK と同じ思想。  
-1Password CLI や macOS Keychain などを使いたいユーザーは、Gyuma を介さず環境変数で渡せばよい。
+クレデンシャル（client_id / client_secret）の保存先は **`.netrc`** に一本化する。  
+gyuma 独自のクレデンシャルファイルは持たない。
+
+ginue も `.netrc` に対応しており、同じファイルで kintone に関する認証情報をまとめて管理できる。  
+GPG 暗号化したい場合は `.netrc.gpg` をユーザーが自分で管理する（gyuma は読み込みのみ対応、書き込みはしない）。
+
+### .netrc のフォーマット
+
+ドメインに `:oauth` suffix をつけた machine エントリに `login=client_id / password=client_secret` を書く。
+
+```
+# kintone ユーザー認証
+machine example.cybozu.com
+  login    kintoneユーザー名
+  password kintoneパスワード
+
+# Basic 認証（リバースプロキシ）
+machine example.cybozu.com:basic
+  login    basic_user
+  password basic_password
+
+# OAuth アプリ認証（gyuma）
+machine example.cybozu.com:oauth
+  login    client_id
+  password client_secret
+```
+
+同一ホストの複数の認証情報を `:suffix` で分離することで、意味的に明確に管理できる。
 
 ### クレデンシャル取得の優先順位
 
@@ -74,8 +100,9 @@ gyuma（npm）
 ```
 1. CLIオプション（--client-id, --client-secret）
 2. 環境変数（GYUMA_CLIENT_ID, GYUMA_CLIENT_SECRET）
-3. ~/.config/gyuma/credentials の該当ドメインセクション
-4. インタラクティブな入力プロンプト（--noprompt なしの場合）
+3. ~/.netrc.gpg の <domain>:oauth エントリ（GPG 復号）
+4. ~/.netrc の <domain>:oauth エントリ
+5. インタラクティブな入力プロンプト（--noprompt なしの場合）
 ```
 
 ### 環境変数について
@@ -91,23 +118,53 @@ GYUMA_CLIENT_ID=xxx GYUMA_CLIENT_SECRET=yyy gyuma --domain a.cybozu.com --scope 
 GYUMA_CLIENT_ID=xxx GYUMA_CLIENT_SECRET=yyy gyuma --domain b.cybozu.com --scope "..."
 ```
 
-### クレデンシャルファイル（プレーンテキスト）
+### .netrc への書き込みについて
 
-AWS SDK の `~/.aws/credentials` と同様の INI 形式を採用する。ドメインをセクションキーとする。
+gyuma は `.netrc` / `.netrc.gpg` への書き込みをしない。ユーザーが自分でエディタで追記する。  
+（ginue も同様の方針）
 
-**保存先**: `~/.config/gyuma/credentials`
+```bash
+# ~/.netrc に追記する例
+machine example.cybozu.com:oauth
+  login    your_client_id
+  password your_client_secret
 
-```ini
-[example.cybozu.com]
-client_id     = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-client_secret = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-[another.cybozu.com]
-client_id     = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-client_secret = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# GPG 暗号化したい場合（.netrc.gpg が既に存在する場合）
+gpg --decrypt ~/.netrc.gpg > /tmp/netrc_plain
+# エディタで編集後
+gpg --encrypt --recipient your@email.com /tmp/netrc_plain > ~/.netrc.gpg
+rm /tmp/netrc_plain
 ```
 
-ファイルのパーミッションは作成時に自動で `600` に設定する。
+### 現行 main 実装からの移行
+
+> **重要:** main ブランチには既に Go 版が実装・公開（1.0.0-beta.1）されているが、クレデンシャル管理は本設計と異なり **独自 INI ファイル方式** を採っている。本設計はそれを `.netrc` 方式へ切り替えるものであり、main 実装の更新が必要。
+
+main の現行実装（INI 方式）：
+
+```ini
+# ~/.config/gyuma/credentials
+[example.cybozu.com]
+client_id = xxxx
+client_secret = yyyy
+```
+
+- 保存先: `~/.config/gyuma/credentials`（`gopkg.in/ini.v1`）
+- 取得優先順位: CLI → 環境変数 → 上記 INI ファイル → プロンプト
+- `--save-credentials` オプションで gyuma 自身が INI ファイルに書き込む
+
+本設計への変更点：
+
+| 項目 | main 現行（INI） | 本設計（.netrc） |
+|---|---|---|
+| 保存先 | `~/.config/gyuma/credentials` | `~/.netrc` / `~/.netrc.gpg` |
+| 形式 | `[domain]` セクション | `machine <domain>:oauth` |
+| GPG | なし | `.netrc.gpg` 読み込み対応（初版から） |
+| 書き込み | `--save-credentials` で gyuma が書く | gyuma は書き込まない（`--save-credentials` 廃止） |
+
+`--save-credentials` の廃止は上記の設計原則（gyuma をシンプルに保つ）に基づく。クレデンシャルの書き込みはユーザーが手で `.netrc` を編集する運用に委ねる。
+
+**ユーザーの移行:** 独自 INI ファイルに保存済みのクレデンシャルは `.netrc` の `machine <domain>:oauth` エントリへ手動移行が必要（初回のみ）。
 
 ---
 
@@ -115,13 +172,15 @@ client_secret = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ```
 ~/.config/gyuma/
-├── credentials           # クレデンシャル（プレーンテキスト・任意）
 ├── tokens.json           # トークンキャッシュ（ドメインをキーとした JSON）
 └── certs/                # 証明書ディレクトリ
     ├── localhost.pem     # mkcert 証明書（setup-cert で生成）
     ├── localhost-key.pem # mkcert 秘密鍵
     ├── self-signed.pem   # 自己署名証明書（フォールバック用）
     └── self-signed-key.pem
+
+~/.netrc または ~/.netrc.gpg
+  machine <domain>:oauth  # gyuma のクレデンシャル
 ```
 
 ### tokens.json のフォーマット
@@ -236,7 +295,6 @@ Setup complete! You can now use gyuma without browser warnings.
 
 ```
 ~/.config/gyuma/
-├── credentials           # クレデンシャル（プレーンテキスト・任意）
 ├── tokens.json           # トークンキャッシュ
 └── certs/
     ├── localhost.pem     # mkcert 証明書（setup-cert で生成）
@@ -319,7 +377,8 @@ gyuma setup-cert [options]         # mkcert 証明書のセットアップ
       --force            既存の証明書を上書き
 ```
 
-> 現行にあった `--password`（クレデンシャル暗号化パスワード）は暗号化廃止に伴い削除。
+> 現行にあった `--password`（クレデンシャル暗号化パスワード）は暗号化廃止に伴い削除。  
+> main 実装にある `--save-credentials`（クレデンシャルのファイル書き込み）も廃止する。gyuma は `.netrc` に書き込まないため（設計原則：シンプルに保つ）。
 
 **標準出力**: `access_token` のみ（JSラッパーがキャプチャする）  
 **標準エラー**: ログ・エラーメッセージ（ユーザーに見せる情報）
@@ -341,7 +400,7 @@ gyuma setup-cert [options]         # mkcert 証明書のセットアップ
    d. 失敗（期限切れ等）→ 新規取得フローへ
 
 3. 新規取得フロー
-   a. クレデンシャルを優先順位に従って取得（CLI → 環境変数 → ファイル → プロンプト）
+   a. クレデンシャルを優先順位に従って取得（CLI → 環境変数 → .netrc.gpg → .netrc → プロンプト）
    b. 自己署名証明書の確認・生成
    c. HTTPS サーバー起動（localhost:PORT）
    d. ブラウザ起動 → kintone 認可ページへリダイレクト
@@ -466,15 +525,19 @@ steps:
 
 ## 移行計画
 
-| フェーズ | 内容 | バージョン |
-|---|---|---|
-| **Phase 1** | Goバイナリの実装・テスト | - |
-| **Phase 2** | npm パッケージ構成の整備・JSラッパー実装 | 1.0.0-beta |
-| **Phase 3** | Node.js 版を deprecated に（README・npm に明記） | 1.0.0 |
-| **Phase 4** | Node.js 版コードをリポジトリから削除 | 2.0.0（将来） |
+> **進捗（2026-02-24 時点）:** Phase 1・2 は main で完了済み（Go 版実装・npm 構成・1.0.0-beta.1 公開、旧 Node.js 版コードも削除済み）。  
+> 本設計の残課題は **クレデンシャル管理の `.netrc` 化**（main 実装の INI 方式からの切り替え）であり、これを 1.0.0 正式版までに反映する。
 
-Phase 3 では `package.json` の `deprecated` フィールドと README に移行案内を記載する。  
-Phase 4 は Phase 3 から最低 6 ヶ月以上の猶予を設ける。
+| フェーズ | 内容 | バージョン | 状態 |
+|---|---|---|---|
+| **Phase 1** | Goバイナリの実装・テスト | - | ✅ 完了（main） |
+| **Phase 2** | npm パッケージ構成の整備・JSラッパー実装 | 1.0.0-beta | ✅ 完了（main） |
+| **Phase 3** | クレデンシャル管理を `.netrc` 一本化へ切り替え（`--save-credentials` 廃止・GPG 対応） | 1.0.0 | ⬜ 未着手 |
+| **Phase 4** | Node.js 版を deprecated に（README・npm に明記） | 1.0.0 | ⬜ 未着手 |
+| **Phase 5** | Node.js 版コードをリポジトリから削除 | 2.0.0（将来） | ⬜ 未着手 |
+
+Phase 4 では `package.json` の `deprecated` フィールドと README に移行案内を記載する。  
+Phase 5 は Phase 4 から最低 6 ヶ月以上の猶予を設ける。
 
 ### Node.js 版からの移行時の注意点
 

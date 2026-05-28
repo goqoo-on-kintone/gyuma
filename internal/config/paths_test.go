@@ -31,14 +31,25 @@ func TestTokensFile(t *testing.T) {
 	}
 }
 
-func TestCredentialsFile(t *testing.T) {
-	path, err := CredentialsFile()
+func TestNetrcFile(t *testing.T) {
+	path, err := NetrcFile()
 	if err != nil {
-		t.Fatalf("CredentialsFile() returned error: %v", err)
+		t.Fatalf("NetrcFile() returned error: %v", err)
 	}
 
-	if !strings.HasSuffix(path, filepath.Join("gyuma", "credentials")) {
-		t.Errorf("CredentialsFile() = %q, want suffix 'gyuma/credentials'", path)
+	if !strings.HasSuffix(path, ".netrc") {
+		t.Errorf("NetrcFile() = %q, want suffix '.netrc'", path)
+	}
+}
+
+func TestNetrcGPGFile(t *testing.T) {
+	path, err := NetrcGPGFile()
+	if err != nil {
+		t.Fatalf("NetrcGPGFile() returned error: %v", err)
+	}
+
+	if !strings.HasSuffix(path, ".netrc.gpg") {
+		t.Errorf("NetrcGPGFile() = %q, want suffix '.netrc.gpg'", path)
 	}
 }
 

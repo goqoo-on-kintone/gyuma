@@ -70,9 +70,8 @@ gyuma -d example.cybozu.com \
 # Use with refresh token
 gyuma -d example.cybozu.com -S "k:app_settings:read" --refresh-token
 
-# Save credentials for future use
-gyuma -d example.cybozu.com -i YOUR_CLIENT_ID -s YOUR_CLIENT_SECRET \
-  -S "k:app_settings:read" --save-credentials
+# Store credentials in ~/.netrc (machine <domain>:oauth) to omit -i/-s
+gyuma -d example.cybozu.com -S "k:app_settings:read"
 ```
 
 ### Setup Certificate
@@ -100,7 +99,6 @@ gyuma setup-cert
 | `--scope` | `-S` | | OAuth2 Scope (required) |
 | `--port` | `-P` | `3000` | Local server port |
 | `--refresh-token` | | `false` | Save and use refresh token |
-| `--save-credentials` | | `false` | Save credentials to file |
 | `--noprompt` | | `false` | Disable interactive input |
 | `--quiet` | | `false` | Suppress warning messages |
 | `--version` | `-v` | | Show version |
@@ -122,15 +120,28 @@ Credentials are resolved in the following order:
 
 1. CLI options (`-i`, `-s`)
 2. Environment variables (`GYUMA_CLIENT_ID`, `GYUMA_CLIENT_SECRET`)
-3. Credentials file (`~/.config/gyuma/credentials`)
-4. Interactive prompt (if not `--noprompt`)
+3. `~/.netrc.gpg` — `machine <domain>:oauth` entry, decrypted via `gpg`
+4. `~/.netrc` — `machine <domain>:oauth` entry
+5. Interactive prompt (if not `--noprompt`)
+
+gyuma reads credentials from `.netrc` but never writes to it. Add an entry yourself:
+
+```
+machine example.cybozu.com:oauth
+  login    YOUR_CLIENT_ID
+  password YOUR_CLIENT_SECRET
+```
+
+The `:oauth` suffix keeps OAuth credentials separate from the kintone user login
+(`machine example.cybozu.com`). ginue reads the same `.netrc`, so credentials can be shared.
+To encrypt, manage `~/.netrc.gpg` yourself with `gpg`; gyuma only reads (and decrypts) it.
 
 ### File Locations
 
 | File | Path | Description |
 |------|------|-------------|
 | Tokens | `~/.config/gyuma/tokens.json` | Cached access/refresh tokens |
-| Credentials | `~/.config/gyuma/credentials` | Saved client credentials (INI format) |
+| Credentials | `~/.netrc` or `~/.netrc.gpg` | OAuth client credentials (`machine <domain>:oauth`; read-only) |
 | Certificates | `~/.config/gyuma/certs/` | SSL certificates for local server |
 
 ### Environment Variables

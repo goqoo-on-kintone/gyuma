@@ -2,4 +2,4 @@ module github.com/goqoo-on-kintone/gyuma
 
 go 1.25.0
 
-require gopkg.in/ini.v1 v1.67.1
+require github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d
