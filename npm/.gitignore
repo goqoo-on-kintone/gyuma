@@ -1,0 +1,3 @@
+# ダウンロードされるバイナリ（postinstall で取得）
+bin/gyuma
+bin/gyuma.exe
