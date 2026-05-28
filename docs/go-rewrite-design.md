@@ -61,6 +61,9 @@ gyuma（npm）
 
 ### 基本思想
 
+**設計原則: gyuma に機能をいたずらに盛り込まず、責務を絞ってシンプルに保つ。**  
+クレデンシャル管理の責務は外部ツール（`.netrc` / ginue / GPG）に委譲し、gyuma 自身は「読み込み」と「OAuth フロー」に専念する。
+
 クレデンシャル（client_id / client_secret）の保存先は **`.netrc`** に一本化する。  
 gyuma 独自のクレデンシャルファイルは持たない。
 
@@ -132,6 +135,36 @@ gpg --decrypt ~/.netrc.gpg > /tmp/netrc_plain
 gpg --encrypt --recipient your@email.com /tmp/netrc_plain > ~/.netrc.gpg
 rm /tmp/netrc_plain
 ```
+
+### 現行 main 実装からの移行
+
+> **重要:** main ブランチには既に Go 版が実装・公開（1.0.0-beta.1）されているが、クレデンシャル管理は本設計と異なり **独自 INI ファイル方式** を採っている。本設計はそれを `.netrc` 方式へ切り替えるものであり、main 実装の更新が必要。
+
+main の現行実装（INI 方式）：
+
+```ini
+# ~/.config/gyuma/credentials
+[example.cybozu.com]
+client_id = xxxx
+client_secret = yyyy
+```
+
+- 保存先: `~/.config/gyuma/credentials`（`gopkg.in/ini.v1`）
+- 取得優先順位: CLI → 環境変数 → 上記 INI ファイル → プロンプト
+- `--save-credentials` オプションで gyuma 自身が INI ファイルに書き込む
+
+本設計への変更点：
+
+| 項目 | main 現行（INI） | 本設計（.netrc） |
+|---|---|---|
+| 保存先 | `~/.config/gyuma/credentials` | `~/.netrc` / `~/.netrc.gpg` |
+| 形式 | `[domain]` セクション | `machine <domain>:oauth` |
+| GPG | なし | `.netrc.gpg` 読み込み対応（初版から） |
+| 書き込み | `--save-credentials` で gyuma が書く | gyuma は書き込まない（`--save-credentials` 廃止） |
+
+`--save-credentials` の廃止は上記の設計原則（gyuma をシンプルに保つ）に基づく。クレデンシャルの書き込みはユーザーが手で `.netrc` を編集する運用に委ねる。
+
+**ユーザーの移行:** 独自 INI ファイルに保存済みのクレデンシャルは `.netrc` の `machine <domain>:oauth` エントリへ手動移行が必要（初回のみ）。
 
 ---
 
@@ -247,7 +280,8 @@ gyuma [options]
   -h, --help             ヘルプ表示
 ```
 
-> 現行にあった `--password`（クレデンシャル暗号化パスワード）は暗号化廃止に伴い削除。
+> 現行にあった `--password`（クレデンシャル暗号化パスワード）は暗号化廃止に伴い削除。  
+> main 実装にある `--save-credentials`（クレデンシャルのファイル書き込み）も廃止する。gyuma は `.netrc` に書き込まないため（設計原則：シンプルに保つ）。
 
 **標準出力**: `access_token` のみ（JSラッパーがキャプチャする）  
 **標準エラー**: ログ・エラーメッセージ（ユーザーに見せる情報）
@@ -394,15 +428,19 @@ steps:
 
 ## 移行計画
 
-| フェーズ | 内容 | バージョン |
-|---|---|---|
-| **Phase 1** | Goバイナリの実装・テスト | - |
-| **Phase 2** | npm パッケージ構成の整備・JSラッパー実装 | 1.0.0-beta |
-| **Phase 3** | Node.js 版を deprecated に（README・npm に明記） | 1.0.0 |
-| **Phase 4** | Node.js 版コードをリポジトリから削除 | 2.0.0（将来） |
+> **進捗（2026-02-24 時点）:** Phase 1・2 は main で完了済み（Go 版実装・npm 構成・1.0.0-beta.1 公開、旧 Node.js 版コードも削除済み）。  
+> 本設計の残課題は **クレデンシャル管理の `.netrc` 化**（main 実装の INI 方式からの切り替え）であり、これを 1.0.0 正式版までに反映する。
 
-Phase 3 では `package.json` の `deprecated` フィールドと README に移行案内を記載する。  
-Phase 4 は Phase 3 から最低 6 ヶ月以上の猶予を設ける。
+| フェーズ | 内容 | バージョン | 状態 |
+|---|---|---|---|
+| **Phase 1** | Goバイナリの実装・テスト | - | ✅ 完了（main） |
+| **Phase 2** | npm パッケージ構成の整備・JSラッパー実装 | 1.0.0-beta | ✅ 完了（main） |
+| **Phase 3** | クレデンシャル管理を `.netrc` 一本化へ切り替え（`--save-credentials` 廃止・GPG 対応） | 1.0.0 | ⬜ 未着手 |
+| **Phase 4** | Node.js 版を deprecated に（README・npm に明記） | 1.0.0 | ⬜ 未着手 |
+| **Phase 5** | Node.js 版コードをリポジトリから削除 | 2.0.0（将来） | ⬜ 未着手 |
+
+Phase 4 では `package.json` の `deprecated` フィールドと README に移行案内を記載する。  
+Phase 5 は Phase 4 から最低 6 ヶ月以上の猶予を設ける。
 
 ### Node.js 版からの移行時の注意点
 
